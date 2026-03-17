@@ -4,7 +4,7 @@ import { computeWeightedScore, getQuestionWeights, inferWeightsFromQuestion, pic
 import { QUESTION_WEIGHTS } from "../../game/constants.js"
 
 describe("game/scoring (extra coverage)", () => {
-  it("inferWeightsFromQuestion deve aplicar fallback completo quando nÃ£o hÃ¡ match", () => {
+  it("inferWeightsFromQuestion deve aplicar fallback completo quando não há match", () => {
     const w = inferWeightsFromQuestion("zzz sem match de regex")
     expect(w).toEqual({
       performance: 1,
@@ -12,11 +12,14 @@ describe("game/scoring (extra coverage)", () => {
       mercado: 1,
       complexidade: 1,
       popularidade: 1,
+      tooling: 1,
+      verbosidade: 1,
+      mobile: 1,
     })
   })
 
-  it("inferWeightsFromQuestion deve inverter pesos quando pergunta Ã© negativa (fora do mapa)", () => {
-    const w = inferWeightsFromQuestion("Qual linguagem Ã© pior em performance?")
+  it("inferWeightsFromQuestion deve inverter pesos quando pergunta é negativa (fora do mapa)", () => {
+    const w = inferWeightsFromQuestion("Qual linguagem é pior em performance?")
     expect(w.performance).toBe(-1)
   })
 
@@ -26,12 +29,12 @@ describe("game/scoring (extra coverage)", () => {
     expect(getQuestionWeights(q)).toEqual(QUESTION_WEIGHTS[q])
   })
 
-  it("computeWeightedScore deve retornar 0 quando weights Ã© null/undefined", () => {
+  it("computeWeightedScore deve retornar 0 quando weights é null/undefined", () => {
     expect(computeWeightedScore({ performance: 10 }, null)).toBe(0)
     expect(computeWeightedScore({ performance: 10 }, undefined)).toBe(0)
   })
 
-  it("pickRoundQuestion deve retornar null para entradas invÃ¡lidas", () => {
+  it("pickRoundQuestion deve retornar null para entradas inválidas", () => {
     expect(pickRoundQuestion(null, new Set())).toBeNull()
     expect(pickRoundQuestion([], new Set())).toBeNull()
   })

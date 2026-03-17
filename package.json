@@ -1,13 +1,15 @@
 {
   "name": "battle-dev",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node scripts/vitest.mjs",
     "test:coverage": "node scripts/vitest.mjs --coverage",
-    "test:raw": "vitest"
+    "test:raw": "vitest",
+    "rebalance": "node scripts/rebalance.mjs",
+    "rebalance:suggest": "node scripts/rebalance.mjs --suggest"
   },
   "dependencies": {
     "ws": "^8.16.0"

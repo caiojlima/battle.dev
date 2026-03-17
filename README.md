@@ -24,6 +24,8 @@ Dica: para testar multiplayer local, abra a URL em duas abas/janelas.
 - `npm run dev` — atalho para iniciar o servidor em modo dev
 - `npm test` — roda testes automatizados (Vitest)
 - `npm run test:coverage` — gera relatório de coverage em `coverage/`
+- `npm run rebalance` — roda simulação (vencedor por pergunta + perguntas mais apertadas)
+- `npm run rebalance:suggest` — sugere rebalanceamento automático dos `stats` (não aplica automaticamente)
 
 ## Como funciona
 

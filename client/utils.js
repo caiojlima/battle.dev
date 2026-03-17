@@ -20,8 +20,10 @@ export function formatStatName(key) {
     mercado: "💼 Mercado",
     complexidade: "🧠 Complexidade",
     popularidade: "🚀 Popularidade",
+    tooling: "🛠️ Tooling",
+    verbosidade: "🗣️ Verbosidade",
+    mobile: "📱 Mobile",
   }
 
   return map[key] || key
 }
-

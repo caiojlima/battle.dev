@@ -66,7 +66,7 @@ describe("game/scoring", () => {
   })
 
   it("exhaustivo: computeWeightedScore deve respeitar comparação por atributo (peso +1)", () => {
-    const keys = ["performance", "facilidade", "mercado", "complexidade", "popularidade"]
+    const keys = ["performance", "facilidade", "mercado", "complexidade", "popularidade", "tooling", "verbosidade", "mobile"]
 
     for (const key of keys) {
       const weights = { [key]: 1 }
@@ -85,7 +85,7 @@ describe("game/scoring", () => {
   })
 
   it("exhaustivo: computeWeightedScore deve inverter preferência com peso -1", () => {
-    const keys = ["performance", "facilidade", "mercado", "complexidade", "popularidade"]
+    const keys = ["performance", "facilidade", "mercado", "complexidade", "popularidade", "tooling", "verbosidade", "mobile"]
 
     for (const key of keys) {
       const weights = { [key]: -1 }
@@ -104,7 +104,7 @@ describe("game/scoring", () => {
   })
 
   it("property: computeWeightedScore é determinístico e aditivo", () => {
-    const stats = { performance: 10, facilidade: 20, mercado: 30, complexidade: 40, popularidade: 50 }
+    const stats = { performance: 10, facilidade: 20, mercado: 30, complexidade: 40, popularidade: 50, tooling: 60, verbosidade: 70, mobile: 80 }
     const w1 = { performance: 1, mercado: 0.5 }
     const w2 = { facilidade: 2 }
 

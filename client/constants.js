@@ -1,5 +1,5 @@
-export const AUTO_NEXT_ROUND_SECONDS = 10
-export const RESULT_CALC_MIN_MS = 1200
+export const AUTO_NEXT_ROUND_SECONDS = 5
+export const RESULT_CALC_MIN_MS = 1075
 
 export const DEFAULT_CARD_COLOR = "#ffffff"
 

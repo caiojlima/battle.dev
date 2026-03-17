@@ -40,15 +40,16 @@ align-items: flex-start;
 .card{
 
 width:160px;
-height:260px;
+min-height:260px;
 
 border-radius:14px;
 
 display:flex;
 flex-direction:column;
-justify-content:space-between;
+justify-content:flex-start;
+gap:10px;
 
-padding:10px;
+padding:15px;
 
 cursor:pointer;
 
@@ -64,28 +65,38 @@ animation: dealCard 0.5s ease forwards;
 flex-shrink: 0;
 }
 
+.card h2{
+  margin: 4px 0 2px;
+}
+
 .personality{
   font-size:13px;
   opacity:.8;
-  margin-bottom:10px;
+  margin: 10px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: 2.4em;
 }
 
 .stats{
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap:4px;
 }
 
 .stat{
   display:flex;
   align-items:center;
   gap:8px;
-  font-size:12px;
+  font-size:11px;
 }
 
 .bar{
   flex:1;
-  height:6px;
+  height:5px;
   background:#222;
   border-radius:10px;
   overflow:hidden;

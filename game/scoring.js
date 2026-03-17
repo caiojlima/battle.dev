@@ -22,7 +22,7 @@ export function inferWeightsFromQuestion(question) {
   if (/(performance|alta performance|r[aá]pid|escala|cloud|microservi[cç]os|cr[ií]tic)/.test(q)) {
     weights.performance = 1
   }
-  if (/(f[aá]cil|iniciante|sintaxe|produtiv|boilerplate|debug|autocomplete|dor de cabe[cç]a|intuitiv)/.test(q)) {
+  if (/(f[aá]cil|iniciante|sintaxe|produtiv|debug|dor de cabe[cç]a|intuitiv)/.test(q)) {
     weights.facilidade = 1
   }
   if (/(mercado|vaga|emprego|carreira|remot|oportunidad|exterior|brasil|entrevist|demanda|internacional)/.test(q)) {
@@ -34,6 +34,15 @@ export function inferWeightsFromQuestion(question) {
   if (/(dif[ií]cil|complex|refator|manter|ileg[ií]vel|legado)/.test(q)) {
     weights.complexidade = 1
   }
+  if (/(ferrament|tooling|ide|autocomplete|intellisense|documenta[cç][aã]o|biblioteca|framework)/.test(q)) {
+    weights.tooling = 1
+  }
+  if (/(verbos|boilerplate|cerim[oô]nia|linhas de c[oó]digo|c[oó]digo demais)/.test(q)) {
+    weights.verbosidade = 1
+  }
+  if (/(mobile|android|ios|iphone|ipad|flutter|react native|swiftui|play store|app store)/.test(q)) {
+    weights.mobile = 1
+  }
 
   // Fallback para nunca ficar sem pesos.
   if (Object.keys(weights).length === 0) {
@@ -42,6 +51,9 @@ export function inferWeightsFromQuestion(question) {
     weights.mercado = 1
     weights.complexidade = 1
     weights.popularidade = 1
+    weights.tooling = 1
+    weights.verbosidade = 1
+    weights.mobile = 1
   }
 
   if (isNegative) {
