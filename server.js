@@ -447,6 +447,7 @@ function createEmptyGameState() {
     score:        { 1: 0, 2: 0 },
     rematchVotes: 0,
     currentQuestion: null,
+    usedQuestions: new Set(),
   }
 }
 
@@ -460,6 +461,7 @@ function resetMatchData() {
   gameState.score        = { 1: 0, 2: 0 }
   gameState.rematchVotes = 0
   gameState.currentQuestion = null
+  gameState.usedQuestions = new Set()
 }
 
 // =============================================================================
@@ -563,10 +565,25 @@ function sendPlayerCount() {
 }
 
 /**
- * Sorteia e retorna uma pergunta aleatória da lista.
+ * Sorteia uma pergunta sem repetição dentro da mesma partida.
+ * Quando esgota o pool de perguntas, reinicia o conjunto e volta a sortear.
  */
-function randomQuestion() {
-  return QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)]
+function pickRoundQuestion() {
+  if (!Array.isArray(QUESTIONS) || QUESTIONS.length === 0) return null
+
+  if (!(gameState.usedQuestions instanceof Set)) {
+    gameState.usedQuestions = new Set()
+  }
+
+  let available = QUESTIONS.filter(q => !gameState.usedQuestions.has(q))
+  if (available.length === 0) {
+    gameState.usedQuestions.clear()
+    available = QUESTIONS.slice()
+  }
+
+  const question = available[Math.floor(Math.random() * available.length)]
+  gameState.usedQuestions.add(question)
+  return question
 }
 
 // =============================================================================
@@ -620,7 +637,7 @@ function startRound() {
 
   dealCards()
 
-  const question = randomQuestion()
+  const question = pickRoundQuestion()
   gameState.currentQuestion = question
 
   broadcast({
