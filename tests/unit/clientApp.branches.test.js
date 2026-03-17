@@ -16,6 +16,7 @@ function resetClientState() {
   state.resultCalcStartedAt = null
   state.pendingResultTimeout = null
   state.pickCountdownTimer = null
+  state.lastReveal = null
 }
 
 function installDom({
@@ -350,4 +351,3 @@ describe("client/app (branches)", () => {
     expect(socket.send).not.toHaveBeenCalled()
   })
 })
-

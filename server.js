@@ -12,6 +12,7 @@ import {
 } from "./game/constants.js"
 
 import { getWeightedScore, pickRoundQuestion } from "./game/scoring.js"
+import { getQuestionWeights } from "./game/scoring.js"
 import { RoomStore, broadcastRoom, resetMatchData } from "./server/room-store.js"
 import { createGameEngine } from "./server/game-engine.js"
 import { createGameService } from "./server/game-service.js"
@@ -137,6 +138,7 @@ const engine = createGameEngine({
   questions: QUESTIONS,
   opponentPickTimeoutMs: OPPONENT_PICK_TIMEOUT_MS,
   getWeightedScore,
+  getQuestionWeights,
   pickRoundQuestion,
   broadcastRoom,
 })

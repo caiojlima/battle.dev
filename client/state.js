@@ -20,4 +20,7 @@ export const state = {
 
   // Countdown do timer de escolha (servidor)
   pickCountdownTimer: null,
+
+  // Último reveal recebido (para explicar o resultado).
+  lastReveal: null,
 }

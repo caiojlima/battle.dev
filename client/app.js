@@ -1,6 +1,6 @@
 import { el, hide, setResultHtml, show } from "./dom.js"
 import { state } from "./state.js"
-import { getColor } from "./utils.js"
+import { escapeHtml, getColor } from "./utils.js"
 import { renderCards } from "./ui/hand.js"
 import { renderScore, updateScoreIndicators } from "./ui/scoreboard.js"
 import { buildPreviewHandCardHtml } from "./ui/cards.js"
@@ -268,11 +268,68 @@ function handleWaiting(data) {
 
 function handleReveal(data) {
   stopPickCountdown()
+  state.lastReveal = {
+    player1Card: data.player1Card || null,
+    player2Card: data.player2Card || null,
+    question: data.question || null,
+  }
   startResultCalcAnimation(state, {
     playerNames: state.playerNames,
     p1Card: data.player1Card,
     p2Card: data.player2Card,
   })
+}
+
+function buildWinnerExplanationHtml(data) {
+  // Explica o resultado usando a pontuação total (score final ponderado).
+  // keyStat é opcional; a explicação prioriza a pontuação total.
+
+  const winnerId = data?.winner
+  if (winnerId !== 1 && winnerId !== 2) return ""
+
+  const winnerCard = data?.winnerCard
+  if (!winnerCard) return ""
+
+  const revealed1 = state.lastReveal?.player1Card?.name
+  const revealed2 = state.lastReveal?.player2Card?.name
+  const loserCard = data?.loserCard || (winnerId === 1 ? revealed2 : revealed1)
+
+  if (!loserCard) return ""
+
+  const winnerColor = getColor(winnerCard)
+  const loserColor = getColor(loserCard)
+
+  const loserId = winnerId === 1 ? 2 : 1
+  const rawWinnerScore = Number(data?.scores?.[winnerId])
+  const rawLoserScore = Number(data?.scores?.[loserId])
+  const hasScores = Number.isFinite(rawWinnerScore) && Number.isFinite(rawLoserScore)
+
+  const calcScoreFromBreakdown = (playerId) => {
+    const contrib = data?.weightBreakdown?.contributions?.[playerId]
+    if (!contrib || typeof contrib !== "object") return null
+    return Object.values(contrib).reduce((sum, v) => sum + (Number(v) || 0), 0)
+  }
+
+  const fallbackWinnerScore = calcScoreFromBreakdown(winnerId)
+  const fallbackLoserScore = calcScoreFromBreakdown(loserId)
+
+  const winnerScore = hasScores ? rawWinnerScore : fallbackWinnerScore
+  const loserScore = hasScores ? rawLoserScore : fallbackLoserScore
+  if (!Number.isFinite(winnerScore) || !Number.isFinite(loserScore)) return ""
+
+  const formatScore = (value) => String(Math.round(Number(value) * 100) / 100)
+
+  return (
+    `<div class="round-explain">` +
+    `<span>Motivo:</span> ` +
+    `<strong>Pontuação total</strong>` +
+    ` - ` +
+    `<span style="color:${winnerColor}"><strong>${escapeHtml(winnerCard)}</strong></span>` +
+    `: <strong>${escapeHtml(formatScore(winnerScore))}</strong> vs ` +
+    `<span style="color:${loserColor}"><strong>${escapeHtml(loserCard)}</strong></span>` +
+    `: <strong>${escapeHtml(formatScore(loserScore))}</strong>` +
+    `</div>`
+  )
 }
 
 function handleResult(data) {
@@ -287,10 +344,13 @@ function handleResult(data) {
       const cardColor = getColor(data.winnerCard)
       setRoundOutcomeHtml(
         `Rodada: <strong>${winnerName}</strong> venceu com ` +
-          `<strong style="color:${cardColor}">${data.winnerCard}</strong>`
+          `<strong style="color:${cardColor}">${data.winnerCard}</strong>` +
+          buildWinnerExplanationHtml(data)
       )
     } else if (data.winner) {
-      setRoundOutcomeHtml(`Rodada: <strong>${winnerName}</strong> venceu!`)
+      setRoundOutcomeHtml(
+        `Rodada: <strong>${winnerName}</strong> venceu!` + buildWinnerExplanationHtml(data)
+      )
     }
 
     el("status").innerText = "Próxima rodada..."
@@ -316,7 +376,7 @@ function handleGameOver(data) {
     const message =
       data.winner == state.playerId ? `🏆 ${state.playerName} venceu!` : `💀 ${getOpponentName()} venceu!`
 
-    setRoundOutcomeHtml(message)
+    setRoundOutcomeHtml(message + buildWinnerExplanationHtml(data))
     el("status").innerText = "Fim de jogo"
 
     hide("nextBtn")

@@ -16,6 +16,7 @@ function resetClientState() {
   state.resultCalcStartedAt = null
   state.pendingResultTimeout = null
   state.pickCountdownTimer = null
+  state.lastReveal = null
 }
 
 describe("client/app (line 258)", () => {
@@ -77,4 +78,3 @@ describe("client/app (line 258)", () => {
     ).not.toThrow()
   })
 })
-

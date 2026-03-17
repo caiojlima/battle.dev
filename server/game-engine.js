@@ -17,6 +17,7 @@ export function createGameEngine({
   questions,
   opponentPickTimeoutMs,
   getWeightedScore,
+  getQuestionWeights = null,
   pickRoundQuestion,
   broadcastRoom,
   timers = {
@@ -145,6 +146,63 @@ export function createGameEngine({
     timers.setTimeout(() => resolveRound(room), 900)
   }
 
+  function buildWeightBreakdown({ question, card1, card2, winner }) {
+    if (!getQuestionWeights) return null
+    const weights = getQuestionWeights(question)
+    if (!weights || typeof weights !== "object") return null
+
+    const stats = Object.keys(weights)
+
+    const p1Stats = {}
+    const p2Stats = {}
+    const p1Contrib = {}
+    const p2Contrib = {}
+
+    for (const stat of stats) {
+      const w = Number(weights[stat]) || 0
+      const v1 = Number(card1?.stats?.[stat]) || 0
+      const v2 = Number(card2?.stats?.[stat]) || 0
+      p1Stats[stat] = v1
+      p2Stats[stat] = v2
+      p1Contrib[stat] = v1 * w
+      p2Contrib[stat] = v2 * w
+    }
+
+    // Melhor "explicação": o stat com maior vantagem (contribuição) para o vencedor.
+    const winnerId = winner === 1 || winner === 2 ? winner : null
+    const loserId = winnerId === 1 ? 2 : winnerId === 2 ? 1 : null
+
+    let keyStat = null
+    if (winnerId && loserId) {
+      let bestGain = -Infinity
+      for (const stat of stats) {
+        const w = Number(weights[stat]) || 0
+        const winnerValue = winnerId === 1 ? p1Stats[stat] : p2Stats[stat]
+        const loserValue = loserId === 1 ? p1Stats[stat] : p2Stats[stat]
+
+        const gain = (winnerValue - loserValue) * w
+        if (gain > bestGain) {
+          bestGain = gain
+          keyStat = {
+            stat,
+            weight: w,
+            winnerValue,
+            loserValue,
+            // Para a UI: quando w<0, "melhor" é ter MENOR valor naquele stat.
+            better: w < 0 ? "lower" : "higher",
+          }
+        }
+      }
+    }
+
+    return {
+      weights,
+      stats: { 1: p1Stats, 2: p2Stats },
+      contributions: { 1: p1Contrib, 2: p2Contrib },
+      keyStat,
+    }
+  }
+
   function resolveRound(room) {
     const played1 = room.plays[1]
     const played2 = room.plays[2]
@@ -172,9 +230,11 @@ export function createGameEngine({
     if (outcome.type === "draw") {
       broadcastRoom(room, {
         type: "draw",
+        question,
         score: room.score,
         playerNames: room.playerNames,
         scores: { 1: score1, 2: score2 },
+        weightBreakdown: buildWeightBreakdown({ question, card1, card2, winner: null }),
       })
       return
     }
@@ -182,12 +242,17 @@ export function createGameEngine({
     const winner = outcome.winner
     room.score[winner]++
 
+    const weightBreakdown = buildWeightBreakdown({ question, card1, card2, winner })
+
     if (room.score[winner] >= winScore) {
       broadcastRoom(room, {
         type: "gameover",
         winner,
+        question,
         playerNames: room.playerNames,
         score: room.score,
+        scores: { 1: score1, 2: score2 },
+        weightBreakdown,
       })
       return
     }
@@ -195,10 +260,13 @@ export function createGameEngine({
     broadcastRoom(room, {
       type: "result",
       winner,
+      question,
       winnerCard: winner === 1 ? card1.name : card2.name,
+      loserCard: winner === 1 ? card2.name : card1.name,
       score: room.score,
       playerNames: room.playerNames,
       scores: { 1: score1, 2: score2 },
+      weightBreakdown,
     })
   }
 

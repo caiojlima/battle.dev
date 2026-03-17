@@ -16,6 +16,7 @@ function resetClientState() {
   state.resultCalcStartedAt = null
   state.pendingResultTimeout = null
   state.pickCountdownTimer = null
+  state.lastReveal = null
 }
 
 describe("client/app (line 253)", () => {
@@ -87,4 +88,3 @@ describe("client/app (line 253)", () => {
     expect(card2.classList.contains("selected")).toBe(false)
   })
 })
-

@@ -16,6 +16,7 @@ function resetClientState() {
   state.resultCalcStartedAt = null
   state.pendingResultTimeout = null
   state.pickCountdownTimer = null
+  state.lastReveal = null
 }
 
 function installBaseDom({ includePlayerCount = true, includePickTimerBanner = true } = {}) {
@@ -300,6 +301,304 @@ describe("client/app (extra coverage)", () => {
     })
 
     expect(result.textContent).toContain("venceu")
+  })
+
+  it("result deve mostrar explicaÃ§Ã£o quando weightBreakdown existir", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice", 2: "Bob" } }) })
+    state.playerName = "Alice"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "reveal",
+        player1Card: { name: "Go", personality: "", stats: { performance: 88 } },
+        player2Card: { name: "Python", personality: "", stats: { performance: 65 } },
+        question: "Qual linguagem Ã© melhor para alta performance?",
+      }),
+    })
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 1,
+        winnerCard: "Go",
+        loserCard: "Python",
+        score: { 1: 1, 2: 0 },
+        scores: { 1: 88, 2: 65 },
+        weightBreakdown: {
+          keyStat: { stat: "performance", weight: 1, winnerValue: 88, loserValue: 65, better: "higher" },
+        },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+
+    expect(result.textContent).toContain("Motivo:")
+    expect(result.textContent).toContain("Pontua")
+    expect(result.textContent).toContain("88")
+    expect(result.textContent).toContain("65")
+  })
+
+  it("reveal deve salvar lastReveal mesmo com cards nulos", () => {
+    installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "reveal", player1Card: null, player2Card: null, question: null }),
+    })
+
+    expect(state.lastReveal).toEqual({ player1Card: null, player2Card: null, question: null })
+  })
+
+  it("result nÃ£o deve adicionar explicaÃ§Ã£o quando winner nÃ£o for 1/2", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    // garante estado para calcular nomes
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    state.playerName = "A"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 3,
+        winnerCard: "Go",
+        score: { 1: 1, 2: 0 },
+        weightBreakdown: { keyStat: { stat: "performance", winnerValue: 10, loserValue: 0 } },
+      }),
+    })
+
+    expect(result.textContent).toContain("venceu")
+    expect(result.textContent).not.toContain("Motivo:")
+  })
+
+  it("result deve usar loserCard do reveal quando loserCard nÃ£o vier no payload", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    state.playerName = "A"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "reveal",
+        player1Card: { name: "Go", personality: "", stats: { performance: 88 } },
+        player2Card: { name: "Python", personality: "", stats: { performance: 65 } },
+        question: "Q",
+      }),
+    })
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 1,
+        winnerCard: "Go",
+        // sem loserCard aqui
+        score: { 1: 1, 2: 0 },
+        scores: { 1: 88, 2: 65 },
+        weightBreakdown: { keyStat: { stat: "performance", winnerValue: 88, loserValue: 65, better: "higher" } },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(result.textContent).toContain("Python")
+  })
+
+  it("result deve mostrar pontuação total mesmo quando winner for 2", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 2 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    state.playerName = "B"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "reveal",
+        player1Card: { name: "C++", personality: "", stats: { complexidade: 90 } },
+        player2Card: { name: "Go", personality: "", stats: { complexidade: 10 } },
+        question: "Q",
+      }),
+    })
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 2,
+        winnerCard: "Go",
+        // sem loserCard aqui para usar fallback
+        score: { 1: 0, 2: 1 },
+        scores: { 1: 10, 2: 20 },
+        weightBreakdown: { keyStat: { stat: "complexidade", winnerValue: 10, loserValue: 90, better: "lower" } },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(result.textContent).toContain("Motivo:")
+    expect(result.textContent).toContain("Pontua")
+  })
+
+  it("result nÃ£o deve adicionar explicaÃ§Ã£o quando winnerCard estiver ausente", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    state.playerName = "A"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 1,
+        // winnerCard ausente
+        score: { 1: 1, 2: 0 },
+        weightBreakdown: { keyStat: { stat: "performance", winnerValue: 10, loserValue: 0 } },
+      }),
+    })
+
+    expect(result.textContent).toContain("venceu")
+    expect(result.textContent).not.toContain("Motivo:")
+  })
+
+  it("result nÃ£o deve explicar quando loserCard nÃ£o puder ser inferido", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    // garante estado para calcular nomes
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    state.playerName = "A"
+
+    // sem reveal e sem loserCard -> buildWinnerExplanationHtml deve retornar ""
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 1,
+        winnerCard: "Go",
+        score: { 1: 1, 2: 0 },
+        weightBreakdown: { keyStat: { stat: "performance", winnerValue: 10, loserValue: 0, better: "higher" } },
+      }),
+    })
+
+    expect(result.textContent).toContain("venceu")
+    expect(result.textContent).not.toContain("Motivo:")
+  })
+
+  it("result deve usar fallback do reveal quando winner for 2", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    state.playerName = "A"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "reveal",
+        player1Card: { name: "Go", personality: "", stats: { performance: 65 } },
+        player2Card: { name: "Python", personality: "", stats: { performance: 88 } },
+        question: "Q",
+      }),
+    })
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 2,
+        winnerCard: "Python",
+        score: { 1: 0, 2: 1 },
+        scores: { 1: 65, 2: 88 },
+        weightBreakdown: { keyStat: { stat: "performance", winnerValue: 88, loserValue: 65, better: "higher" } },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(result.textContent).toContain("Motivo:")
+    expect(result.textContent).toContain("Go")
+  })
+
+  it("result deve conseguir explicar via contributions quando scores nÃ£o vier", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    state.playerName = "A"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "reveal",
+        player1Card: { name: "Go", personality: "", stats: {} },
+        player2Card: { name: "Python", personality: "", stats: {} },
+        question: "Q",
+      }),
+    })
+
+    // sem `scores`: usa fallback por contributions
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 1,
+        winnerCard: "Go",
+        score: { 1: 1, 2: 0 },
+        weightBreakdown: {
+          contributions: {
+            1: { performance: 10, tooling: 0 },
+            2: { performance: 5 },
+          },
+        },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(result.textContent).toContain("Motivo:")
+    expect(result.textContent).toContain("10")
+    expect(result.textContent).toContain("5")
+  })
+
+  it("result nÃ£o deve explicar quando nÃ£o houver scores nem contributions", () => {
+    const { result } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
+    state.playerName = "A"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "reveal",
+        player1Card: { name: "Go", personality: "", stats: {} },
+        player2Card: { name: "Python", personality: "", stats: {} },
+        question: "Q",
+      }),
+    })
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "result",
+        winner: 1,
+        winnerCard: "Go",
+        score: { 1: 1, 2: 0 },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(result.textContent).not.toContain("Motivo:")
   })
 
   it("tipo de mensagem desconhecido deve logar warn", () => {
