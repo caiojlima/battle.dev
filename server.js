@@ -435,11 +435,14 @@ const QUESTION_WEIGHTS = {
 // score       — pontuação acumulada { 1: n, 2: n }
 // rematchVotes— contador de votos de revanche (precisa de 2 para reiniciar)
 // =============================================================================
-let gameState = createEmptyGameState()
+const rooms = new Map()
+let nextRoomId = 1
 
 /** Retorna um objeto de estado zerado para ser usado na inicialização e no reset. */
-function createEmptyGameState() {
+function createEmptyRoomState(roomId) {
   return {
+    roomId,
+    createdAt: Date.now(),
     players:      {},
     playerNames:  {},
     hands:        { 1: [], 2: [] },
@@ -455,13 +458,28 @@ function createEmptyGameState() {
  * Reseta apenas os dados da rodada/partida, preservando os jogadores conectados.
  * Usado quando um jogador desconecta (mantemos o socket do outro) e no rematch.
  */
-function resetMatchData() {
-  gameState.hands        = { 1: [], 2: [] }
-  gameState.plays        = {}
-  gameState.score        = { 1: 0, 2: 0 }
-  gameState.rematchVotes = 0
-  gameState.currentQuestion = null
-  gameState.usedQuestions = new Set()
+function resetMatchData(room) {
+  room.hands        = { 1: [], 2: [] }
+  room.plays        = {}
+  room.score        = { 1: 0, 2: 0 }
+  room.rematchVotes = 0
+  room.currentQuestion = null
+  room.usedQuestions = new Set()
+}
+
+function createRoom() {
+  const roomId = String(nextRoomId++)
+  const room = createEmptyRoomState(roomId)
+  rooms.set(roomId, room)
+  return room
+}
+
+function getOrCreateRoomForJoin() {
+  const openRoom = [...rooms.values()]
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .find(r => Object.keys(r.players).length < 2)
+
+  return openRoom || createRoom()
 }
 
 // =============================================================================
@@ -545,8 +563,8 @@ function shuffle(array) {
 /**
  * Envia uma mensagem JSON para todos os jogadores com socket aberto (readyState === 1).
  */
-function broadcast(data) {
-  Object.values(gameState.players).forEach(ws => {
+function broadcastRoom(room, data) {
+  Object.values(room.players).forEach(ws => {
     if (ws.readyState === 1) {
       ws.send(JSON.stringify(data))
     }
@@ -568,21 +586,21 @@ function sendPlayerCount() {
  * Sorteia uma pergunta sem repetição dentro da mesma partida.
  * Quando esgota o pool de perguntas, reinicia o conjunto e volta a sortear.
  */
-function pickRoundQuestion() {
+function pickRoundQuestion(room) {
   if (!Array.isArray(QUESTIONS) || QUESTIONS.length === 0) return null
 
-  if (!(gameState.usedQuestions instanceof Set)) {
-    gameState.usedQuestions = new Set()
+  if (!(room.usedQuestions instanceof Set)) {
+    room.usedQuestions = new Set()
   }
 
-  let available = QUESTIONS.filter(q => !gameState.usedQuestions.has(q))
+  let available = QUESTIONS.filter(q => !room.usedQuestions.has(q))
   if (available.length === 0) {
-    gameState.usedQuestions.clear()
+    room.usedQuestions.clear()
     available = QUESTIONS.slice()
   }
 
   const question = available[Math.floor(Math.random() * available.length)]
-  gameState.usedQuestions.add(question)
+  room.usedQuestions.add(question)
   return question
 }
 
@@ -594,36 +612,36 @@ function pickRoundQuestion() {
  * Distribui cartas únicas para cada jogador e inicia a primeira rodada.
  * Chamado assim que os dois jogadores informam seus nomes.
  */
-function startMatch() {
+function startMatch(room) {
   // Envia cartas distintas para cada jogador
-  gameState.players[1].send(JSON.stringify({
+  room.players[1].send(JSON.stringify({
     type:      "init",
     playerId:  1,
   }))
 
-  gameState.players[2].send(JSON.stringify({
+  room.players[2].send(JSON.stringify({
     type:      "init",
     playerId:  2,
   }))
 
-  console.log("Partida iniciada com 2 jogadores")
-  startRound()
+  console.log(`Partida iniciada. Sala ${room.roomId}`)
+  startRound(room)
 }
 
-function dealCards() {
+function dealCards(room) {
   const shuffled = shuffle(LANGUAGES)
 
   const hand1 = shuffled.slice(0, CARDS_PER_PLAYER)
   const hand2 = shuffled.slice(CARDS_PER_PLAYER, CARDS_PER_PLAYER * 2)
 
-  gameState.hands = { 1: hand1, 2: hand2 }
+  room.hands = { 1: hand1, 2: hand2 }
 
-  gameState.players[1].send(JSON.stringify({
+  room.players[1].send(JSON.stringify({
     type: "newCards",
     languages: hand1,
   }))
 
-  gameState.players[2].send(JSON.stringify({
+  room.players[2].send(JSON.stringify({
     type: "newCards",
     languages: hand2,
   }))
@@ -632,19 +650,21 @@ function dealCards() {
 /**
  * Inicia uma nova rodada: limpa as jogadas anteriores e envia uma nova pergunta.
  */
-function startRound() {
-  gameState.plays = {}
+function startRound(room) {
+  if (!room.players[1] || !room.players[2]) return
 
-  dealCards()
+  room.plays = {}
 
-  const question = pickRoundQuestion()
-  gameState.currentQuestion = question
+  dealCards(room)
 
-  broadcast({
+  const question = pickRoundQuestion(room)
+  room.currentQuestion = question
+
+  broadcastRoom(room, {
     type:        "question",
     question,
-    score:       gameState.score,
-    playerNames: gameState.playerNames,
+    score:       room.score,
+    playerNames: room.playerNames,
   })
 }
 
@@ -652,47 +672,47 @@ function startRound() {
  * Revela as cartas escolhidas por ambos os jogadores.
  * Chamado com um pequeno delay após os dois jogarem (para animar o ✓).
  */
-function revealCards() {
-  const played1 = gameState.plays[1]
-  const played2 = gameState.plays[2]
+function revealCards(room) {
+  const played1 = room.plays[1]
+  const played2 = room.plays[2]
 
   const card1 =
-    gameState.hands?.[1]?.find(c => c.name === played1) ||
+    room.hands?.[1]?.find(c => c.name === played1) ||
     LANGUAGES.find(c => c.name === played1)
 
   const card2 =
-    gameState.hands?.[2]?.find(c => c.name === played2) ||
+    room.hands?.[2]?.find(c => c.name === played2) ||
     LANGUAGES.find(c => c.name === played2)
 
-  broadcast({
+  broadcastRoom(room, {
     type:    "reveal",
     player1Card: card1 || null,
     player2Card: card2 || null,
-    question: gameState.currentQuestion,
+    question: room.currentQuestion,
   })
 
   // Após revelar, resolve automaticamente o vencedor da rodada.
-  setTimeout(resolveRound, 900)
+  setTimeout(() => resolveRound(room), 900)
 }
 
-function resolveRound() {
-  const played1 = gameState.plays[1]
-  const played2 = gameState.plays[2]
+function resolveRound(room) {
+  const played1 = room.plays[1]
+  const played2 = room.plays[2]
   if (!played1 || !played2) return
 
-  const question = gameState.currentQuestion
+  const question = room.currentQuestion
 
   const card1 =
-    gameState.hands?.[1]?.find(c => c.name === played1) ||
+    room.hands?.[1]?.find(c => c.name === played1) ||
     LANGUAGES.find(c => c.name === played1)
 
   const card2 =
-    gameState.hands?.[2]?.find(c => c.name === played2) ||
+    room.hands?.[2]?.find(c => c.name === played2) ||
     LANGUAGES.find(c => c.name === played2)
 
   if (!card1 || !card2) {
     console.warn("Não foi possível resolver a rodada (carta inválida):", { played1, played2 })
-    broadcast({ type: "draw", score: gameState.score, playerNames: gameState.playerNames })
+    broadcastRoom(room, { type: "draw", score: room.score, playerNames: room.playerNames })
     return
   }
 
@@ -701,34 +721,34 @@ function resolveRound() {
 
   const EPS = 1e-9
   if (Math.abs(score1 - score2) < EPS) {
-    broadcast({
+    broadcastRoom(room, {
       type:        "draw",
-      score:       gameState.score,
-      playerNames: gameState.playerNames,
+      score:       room.score,
+      playerNames: room.playerNames,
       scores:      { 1: score1, 2: score2 },
     })
     return
   }
 
   const winner = score1 > score2 ? 1 : 2
-  gameState.score[winner]++
+  room.score[winner]++
 
-  if (gameState.score[winner] >= WIN_SCORE) {
-    broadcast({
+  if (room.score[winner] >= WIN_SCORE) {
+    broadcastRoom(room, {
       type:        "gameover",
       winner,
-      playerNames: gameState.playerNames,
-      score:       gameState.score,
+      playerNames: room.playerNames,
+      score:       room.score,
     })
     return
   }
 
-  broadcast({
+  broadcastRoom(room, {
     type:        "result",
     winner,
     winnerCard:  winner === 1 ? card1.name : card2.name,
-    score:       gameState.score,
-    playerNames: gameState.playerNames,
+    score:       room.score,
+    playerNames: room.playerNames,
     scores:      { 1: score1, 2: score2 },
   })
 }
@@ -740,20 +760,10 @@ function resolveRound() {
 const wss = new WebSocketServer({ server })
 
 wss.on("connection", (ws) => {
-  // Recusa a conexão se a sala já está cheia
-  if (Object.keys(gameState.players).length >= 2) {
-    console.log("Conexão recusada: sala cheia")
-    ws.close(1008, "Sala cheia")
-    return
-  }
-
-  // Atribui o slot livre (1 ou 2) em vez de depender do tamanho do array.
-  // Isso garante que, se o jogador 1 desconectar, o próximo a entrar receba
-  // o ID 1 (slot vago) e não o ID 2 (que já está ocupado pelo jogador 2).
-  const playerId = gameState.players[1] ? 2 : 1
-  gameState.players[playerId] = ws
-
-  console.log(`Jogador ${playerId} conectado. Sala: ${Object.keys(gameState.players).length}/2`)
+  // A sala é atribuída no "join" para evitar segurar slots caso o usuário conecte
+  // mas não finalize o login.
+  ws.roomId = null
+  ws.playerId = null
   connectedPlayers++
   clients.add(ws)
 
@@ -765,58 +775,63 @@ wss.on("connection", (ws) => {
 
       // "join" é tratado fora do switch por ter fluxo diferente (precisa de return)
       if (data.type === "join") {
-        handleJoin(playerId, ws, data.name)
+        handleJoin(ws, data.name)
         return
       }
+
+      if (!ws.roomId || !ws.playerId) return
+      const room = rooms.get(ws.roomId)
+      if (!room) return
+      const playerId = ws.playerId
 
       switch (data.type) {
         // Jogador confirmou uma carta para esta rodada
         case "play": {
-          if (!data.card || gameState.plays[playerId]) {
+          if (!data.card || room.plays[playerId]) {
             console.warn(`Jogada inválida do jogador ${playerId}`)
             return
           }
 
-          const inHand = gameState.hands?.[playerId]?.some(c => c.name === data.card)
+          const inHand = room.hands?.[playerId]?.some(c => c.name === data.card)
           if (!inHand) {
             console.warn(`Jogador ${playerId} tentou jogar uma carta que não está na mão:`, data.card)
             return
           }
 
-          gameState.plays[playerId] = data.card
-          console.log(`Jogador ${playerId} jogou: ${data.card}`)
+          room.plays[playerId] = data.card
+          console.log(`Sala ${room.roomId}: jogador ${playerId} jogou: ${data.card}`)
 
           // Notifica ambos com TODOS que já jogaram (para exibir o ✓ no placar).
           // Usa Object.keys após atribuir a jogada, então o array já inclui o
           // jogador atual e qualquer outro que tenha jogado antes.
-          broadcast({
+          broadcastRoom(room, {
             type:      "waiting",
-            playedBy:  Object.keys(gameState.plays).map(Number),
+            playedBy:  Object.keys(room.plays).map(Number),
             whoPlayed: playerId,
           })
 
           // Se os dois já jogaram, revela após um pequeno delay
-          if (gameState.plays[1] && gameState.plays[2]) {
-            setTimeout(revealCards, 500)
+          if (room.plays[1] && room.plays[2]) {
+            setTimeout(() => revealCards(room), 500)
           }
           break
         }
 
         // Jogador clicou em "Próxima rodada" (manual ou pelo timer)
         case "next":
-          startRound()
+          startRound(room)
           break
 
         // Jogador solicitou uma revanche após o fim de jogo
         case "rematch": {
-          gameState.rematchVotes++
-          console.log(`Voto de revanche: ${gameState.rematchVotes}/2`)
+          room.rematchVotes++
+          console.log(`Sala ${room.roomId}: voto de revanche ${room.rematchVotes}/2`)
           
           const opponentId = playerId === 1 ? 2 : 1
 
-          if (gameState.rematchVotes < 2) {
+          if (room.rematchVotes < 2) {
             // Ainda aguardando o outro jogador aceitar
-            gameState.players[opponentId]?.send(JSON.stringify({
+            room.players[opponentId]?.send(JSON.stringify({
               type: "waitingRematch",
               from: playerId
             }))
@@ -824,9 +839,9 @@ wss.on("connection", (ws) => {
           }
 
           // Ambos aceitaram — reinicia a partida do zero (mantendo os jogadores)
-          console.log("Revanche aprovada. Reiniciando partida...")
-          resetMatchData()
-          startMatch()
+          console.log(`Sala ${room.roomId}: revanche aprovada. Reiniciando partida...`)
+          resetMatchData(room)
+          startRound(room)
           break
         }
 
@@ -844,22 +859,28 @@ wss.on("connection", (ws) => {
     clients.delete(ws)
     sendPlayerCount()
 
-    console.log(`Jogador ${playerId} desconectou`)
+    if (!ws.roomId || !ws.playerId) return
 
-    // Notifica o adversário que ainda está na sala
+    const room = rooms.get(ws.roomId)
+    if (!room) return
+
+    const playerId = ws.playerId
+    console.log(`Sala ${room.roomId}: jogador ${playerId} desconectou`)
+
     const opponentId = playerId === 1 ? 2 : 1
-    gameState.players[opponentId]?.send(JSON.stringify({
-      type: "playerDisconnected",
-    }))
+    room.players[opponentId]?.send(JSON.stringify({ type: "playerDisconnected" }))
 
-    // Remove o jogador desconectado e reseta os dados da partida
-    delete gameState.players[playerId]
-    delete gameState.playerNames[playerId]
-    resetMatchData()
+    delete room.players[playerId]
+    delete room.playerNames[playerId]
+    resetMatchData(room)
+
+    if (Object.keys(room.players).length === 0) {
+      rooms.delete(room.roomId)
+    }
   })
 
   ws.on("error", (err) => {
-    console.error(`Erro WebSocket (jogador ${playerId}):`, err.message)
+    console.error("Erro WebSocket:", err.message)
   })
 })
 
@@ -872,36 +893,46 @@ wss.on("connection", (ws) => {
  *
  * Quando os dois jogadores estão registrados, a partida é iniciada.
  */
-function handleJoin(playerId, ws, name) {
+function handleJoin(ws, name) {
   if (!name || !name.trim()) {
-    console.warn(`Jogador ${playerId} tentou entrar sem nome`)
+    console.warn("Join recusado: nome inválido")
     return
   }
 
-  const isRejoining = Boolean(gameState.playerNames[playerId])
+  const trimmed = name.trim()
+  const room = ws.roomId ? rooms.get(ws.roomId) : getOrCreateRoomForJoin()
+  if (!room) return
 
-  gameState.playerNames[playerId] = name.trim()
-  console.log(`Jogador ${playerId} ${isRejoining ? "reentrando" : "entrou"} como: ${name}`)
+  // Se ainda não tem slot, ocupa o primeiro livre.
+  if (!ws.roomId || !ws.playerId) {
+    const playerId = room.players[1] ? 2 : 1
+    if (room.players[playerId]) {
+      console.warn(`Sala ${room.roomId} está cheia`)
+      return
+    }
+    room.players[playerId] = ws
+    ws.roomId = room.roomId
+    ws.playerId = playerId
+  }
 
-  // Confirma para o jogador que entrou/voltou
+  room.playerNames[ws.playerId] = trimmed
+  console.log(`Sala ${room.roomId}: jogador ${ws.playerId} entrou como: ${trimmed}`)
+
+  // Confirma para o jogador que entrou
   ws.send(JSON.stringify({
     type:        "joined",
-    playerNames: gameState.playerNames,
+    playerNames: room.playerNames,
   }))
 
-  // Se está reentrado após queda do adversário, apenas aguarda — não reinicia a partida
-  if (isRejoining) return
-
   // Se os dois jogadores estão registrados, inicia a partida
-  const bothPlayersNamed = Object.keys(gameState.playerNames).length === 2
+  const bothPlayersNamed = Boolean(room.playerNames[1] && room.playerNames[2])
 
   if (bothPlayersNamed) {
-    // Notifica ambos com os nomes finais antes de distribuir as cartas
-    broadcast({
+    broadcastRoom(room, {
       type:        "joined",
-      playerNames: gameState.playerNames,
+      playerNames: room.playerNames,
     })
-    startMatch()
+    startMatch(room)
   }
 }
 
