@@ -24,6 +24,11 @@ let confirmed      = false  // true após o jogador confirmar a carta da rodada
 let autoNextRoundTimer = null
 const AUTO_NEXT_ROUND_SECONDS = 10
 
+// Controle da animação de "cálculo de resultado" (entre reveal e result/draw)
+const RESULT_CALC_MIN_MS = 1500
+let resultCalcStartedAt = null
+let pendingResultTimeout = null
+
 // Referência ao container de cartas — usado com frequência
 const cardsDiv = document.getElementById("cards")
 
@@ -74,17 +79,6 @@ const LANGUAGE_COLORS = {
 // HELPERS UTILITÁRIOS
 // =============================================================================
 
-/**
- * Converte o nome de uma linguagem para o slug usado pelo Devicon.
- * Ex: "C++" => "cplusplus", "C#" => "csharp"
- */
-function toDeviconSlug(lang) {
-  return lang
-    .toLowerCase()
-    .replace("c++", "cplusplus")
-    .replace("c#",  "csharp")
-}
-
 function getColor(name) {
   return LANGUAGE_COLORS[name] || "#ffffff"
 }
@@ -104,6 +98,55 @@ function getOpponentName() {
  */
 function el(id) {
   return document.getElementById(id)
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function buildPreviewHandCardHtml(lang, ownerName) {
+  const name = lang?.name ?? ""
+  const personality = lang?.personality ?? ""
+  const stats = lang?.stats ?? {}
+  const color = getColor(name)
+
+  return `
+    <div class="card calc-preview" style="
+      border-top: 4px solid ${color};
+      box-shadow: 0 6px 20px ${color}30;
+    ">
+
+      <h4 style="color:${color}">
+        ${escapeHtml(name)}
+      </h4>
+
+      <p class="personality">
+        ${escapeHtml(personality)}
+      </p>
+
+      <div class="card-info">
+        <p><strong>Jogador:</strong> ${escapeHtml(ownerName)}</p>
+      </div>
+
+      <div class="stats">
+        ${Object.entries(stats).map(([key, value]) => `
+          <div class="stat">
+            <span>${escapeHtml(formatStatName(key))}</span>
+            <div class="bar">
+              <div class="fill" style="width:${Number(value)}%"></div>
+            </div>
+            <strong>${Number(value)}</strong>
+          </div>
+        `).join("")}
+      </div>
+
+    </div>
+  `
 }
 
 /**
@@ -240,6 +283,7 @@ function handleQuestion(data) {
   // Sem isso, um clique manual em "Próxima" enviaria "next" e o timer ainda
   // ativo dispararia um segundo "next" segundos depois, resetando a rodada 2x.
   cancelAutoNextRoundTimer()
+  stopResultCalcAnimation({ clearResult: true })
 
   el("question").innerText = data.question
   el("status").innerText   = "Escolha uma carta"
@@ -248,7 +292,6 @@ function handleQuestion(data) {
   renderScore(data.score)
 
   // Esconde todos os controles de ação da rodada anterior
-  hide("duel")
   hide("nextBtn")
   hide("confirmBtn")
 
@@ -275,51 +318,40 @@ function handleWaiting(data) {
 
 /**
  * "reveal" — ambos jogaram, hora de revelar as cartas.
- * Exibe as escolhas de cada jogador no painel de duelo.
+ * As cartas do duelo não são exibidas no cliente (apareciam rápido demais).
  */
 function handleReveal(data) {
-  const p1Name = playerNames[1] || "Jogador 1"
-  const p2Name = playerNames[2] || "Jogador 2"
-
-  el("status").innerText = "Cartas reveladas! Calculando vencedor..."
-
-  el("duel").innerHTML = `
-    <p class="duel-title">Duelo da rodada</p>
-    <div class="duel-cards">
-      <div class="duel-card">
-        <span class="duel-player-name">${p1Name}</span>
-        <i class="duel-lang-icon devicon-${toDeviconSlug(data.player1)}-plain"></i>
-        <span class="duel-lang-name">${data.player1}</span>
-      </div>
-      <div class="duel-vs-divider">VS</div>
-      <div class="duel-card">
-        <span class="duel-player-name">${p2Name}</span>
-        <i class="duel-lang-icon devicon-${toDeviconSlug(data.player2)}-plain"></i>
-        <span class="duel-lang-name">${data.player2}</span>
-      </div>
-    </div>
-  `
-  show("duel", "block")
+  // Executa uma animação rápida de "cálculo" antes do resultado chegar.
+  // (As cartas do duelo foram removidas por aparecerem rápido demais.)
+  startResultCalcAnimation({
+    p1Card: data.player1Card,
+    p2Card: data.player2Card,
+  })
 }
 
 /**
  * "result" — o servidor resolveu o vencedor da rodada, placar atualizado.
- * Esconde o painel de duelo e inicia o countdown para a próxima rodada.
+ * Inicia o countdown para a próxima rodada.
  */
 function handleResult(data) {
-  hide("duel")
-  renderScore(data.score)
-  show("nextBtn")
-  startAutoNextRoundTimer()
+  showResultAfterCalc(() => {
+    renderScore(data.score)
+    show("nextBtn")
+    startAutoNextRoundTimer()
 
-  const winnerName = data.winner == playerId ? playerName : getOpponentName()
-  if (data.winner && data.winnerCard) {
-    el("result").innerHTML = `Rodada: <strong>${winnerName}</strong> venceu com <strong>${data.winnerCard}</strong>`
-  } else if (data.winner) {
-    el("result").innerHTML = `Rodada: <strong>${winnerName}</strong> venceu!`
-  }
+    const winnerName = data.winner == playerId ? playerName : getOpponentName()
+    if (data.winner && data.winnerCard) {
+      const cardColor = getColor(data.winnerCard)
+      setRoundOutcomeHtml(
+        `Rodada: <strong>${winnerName}</strong> venceu com ` +
+        `<strong style="color:${cardColor}">${data.winnerCard}</strong>`
+      )
+    } else if (data.winner) {
+      setRoundOutcomeHtml(`Rodada: <strong>${winnerName}</strong> venceu!`)
+    }
 
-  el("status").innerText = "Próxima rodada..."
+    el("status").innerText = "Próxima rodada..."
+  })
 }
 
 /**
@@ -327,12 +359,13 @@ function handleResult(data) {
  * Inicia o countdown para a próxima rodada.
  */
 function handleDraw() {
-  hide("duel")
-  show("nextBtn")
-  startAutoNextRoundTimer()
+  showResultAfterCalc(() => {
+    show("nextBtn")
+    startAutoNextRoundTimer()
 
-  el("result").innerHTML = "Rodada empatada!"
-  el("status").innerText = "Próxima rodada..."
+    setRoundOutcomeHtml("Rodada empatada!")
+    el("status").innerText = "Próxima rodada..."
+  })
 }
 
 /**
@@ -340,19 +373,20 @@ function handleDraw() {
  * Exibe o resultado final e o botão de revanche.
  */
 function handleGameOver(data) {
-  renderScore(data.score)
+  showResultAfterCalc(() => {
+    renderScore(data.score)
 
-  // Mensagem personalizada dependendo se o jogador local ganhou ou perdeu
-  const message = data.winner == playerId
-    ? `🏆 ${playerName} venceu!`
-    : `💀 ${getOpponentName()} venceu!`
+    // Mensagem personalizada dependendo se o jogador local ganhou ou perdeu
+    const message = data.winner == playerId
+      ? `🏆 ${playerName} venceu!`
+      : `💀 ${getOpponentName()} venceu!`
 
-  el("result").innerHTML = message
-  el("status").innerText = "Fim de jogo"
+    setRoundOutcomeHtml(message)
+    el("status").innerText = "Fim de jogo"
 
-  hide("duel")
-  hide("nextBtn")
-  show("rematchBtn")
+    hide("nextBtn")
+    show("rematchBtn")
+  })
 }
 
 /**
@@ -497,6 +531,7 @@ function resetToInitial() {
   // Cancela o countdown antes de qualquer outra coisa
   // (evita que o timer dispare um "next" enquanto o estado já foi limpo)
   cancelAutoNextRoundTimer()
+  stopResultCalcAnimation({ clearResult: true })
 
   // Reseta estado da rodada
   selectedCard  = null
@@ -510,10 +545,6 @@ function resetToInitial() {
   el("status").innerText   = ""
   el("score").innerHTML    = `Jogador 1: <span id="p1">0</span> | Jogador 2: <span id="p2">0</span>`
   el("result").innerHTML   = ""
-
-  // Limpa o painel de duelo/revelação
-  el("duel").innerHTML     = ""
-  el("duel").style.display = "none"
 
   hide("nextBtn")
   hide("confirmBtn")
@@ -665,6 +696,77 @@ function cancelAutoNextRoundTimer() {
     clearInterval(autoNextRoundTimer)
     autoNextRoundTimer = null
   }
+}
+
+function startResultCalcAnimation({ p1Card = null, p2Card = null } = {}) {
+  stopResultCalcAnimation()
+
+  const p1Name = playerNames[1] || "Jogador 1"
+  const p2Name = playerNames[2] || "Jogador 2"
+
+  const card1 = p1Card && typeof p1Card === "object" ? p1Card : null
+  const card2 = p2Card && typeof p2Card === "object" ? p2Card : null
+
+  resultCalcStartedAt = Date.now()
+  el("result").innerHTML = `
+    <div id="chosenCards" class="calc-duel">
+      ${card1 ? buildPreviewHandCardHtml(card1, p1Name) : ""}
+      <div class="calc-vs">VS</div>
+      ${card2 ? buildPreviewHandCardHtml(card2, p2Name) : ""}
+    </div>
+    <div id="roundOutcome"></div>
+    <div class="result-loading" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Calculando resultado...</span>
+    </div>
+  `
+  el("status").innerText = "Aguarde o resultado..."
+}
+
+function stopResultCalcAnimation({ clearResult = false, keepChosenCards = true } = {}) {
+  if (pendingResultTimeout) {
+    clearTimeout(pendingResultTimeout)
+    pendingResultTimeout = null
+  }
+  resultCalcStartedAt = null
+  if (clearResult) {
+    el("result").innerHTML = ""
+    return
+  }
+
+  const loading = document.querySelector("#result .result-loading")
+  if (loading) loading.remove()
+
+  if (!keepChosenCards) {
+    el("chosenCards")?.remove()
+  }
+}
+
+function showResultAfterCalc(fn) {
+  const startedAt = resultCalcStartedAt
+  const elapsed = startedAt ? Date.now() - startedAt : RESULT_CALC_MIN_MS
+  const remaining = Math.max(0, RESULT_CALC_MIN_MS - elapsed)
+
+  if (remaining === 0) {
+    stopResultCalcAnimation({ keepChosenCards: true })
+    fn()
+    return
+  }
+
+  pendingResultTimeout = setTimeout(() => {
+    pendingResultTimeout = null
+    stopResultCalcAnimation({ keepChosenCards: true })
+    fn()
+  }, remaining)
+}
+
+function setRoundOutcomeHtml(html) {
+  const container = el("roundOutcome")
+  if (container) {
+    container.innerHTML = html
+    return
+  }
+  el("result").innerHTML = html
 }
 
 // =============================================================================

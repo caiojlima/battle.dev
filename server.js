@@ -636,10 +636,21 @@ function startRound() {
  * Chamado com um pequeno delay após os dois jogarem (para animar o ✓).
  */
 function revealCards() {
+  const played1 = gameState.plays[1]
+  const played2 = gameState.plays[2]
+
+  const card1 =
+    gameState.hands?.[1]?.find(c => c.name === played1) ||
+    LANGUAGES.find(c => c.name === played1)
+
+  const card2 =
+    gameState.hands?.[2]?.find(c => c.name === played2) ||
+    LANGUAGES.find(c => c.name === played2)
+
   broadcast({
     type:    "reveal",
-    player1: gameState.plays[1],
-    player2: gameState.plays[2],
+    player1Card: card1 || null,
+    player2Card: card2 || null,
     question: gameState.currentQuestion,
   })
 
