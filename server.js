@@ -432,7 +432,6 @@ const QUESTION_WEIGHTS = {
 //                mesmo quando um jogador desconecta e reconecta)
 // playerNames — objeto { 1: "nome", 2: "nome" }
 // plays       — objeto { playerId: "nomeDaCarta" } com as cartas jogadas
-// votes       — objeto { playerId: winnerId } com os votos desta rodada
 // score       — pontuação acumulada { 1: n, 2: n }
 // rematchVotes— contador de votos de revanche (precisa de 2 para reiniciar)
 // =============================================================================
@@ -445,7 +444,6 @@ function createEmptyGameState() {
     playerNames:  {},
     hands:        { 1: [], 2: [] },
     plays:        {},
-    votes:        {},
     score:        { 1: 0, 2: 0 },
     rematchVotes: 0,
     currentQuestion: null,
@@ -459,7 +457,6 @@ function createEmptyGameState() {
 function resetMatchData() {
   gameState.hands        = { 1: [], 2: [] }
   gameState.plays        = {}
-  gameState.votes        = {}
   gameState.score        = { 1: 0, 2: 0 }
   gameState.rematchVotes = 0
   gameState.currentQuestion = null
@@ -502,7 +499,7 @@ function inferWeightsFromQuestion(question) {
     weights.complexidade = 1
   }
 
-  // Se nada casou, usa uma mÃ©dia "geral" para nÃ£o cair em random.
+  // Se nada casou, usa uma média "geral" para não cair em random.
   if (Object.keys(weights).length === 0) {
     weights.performance   = 1
     weights.facilidade    = 1
@@ -616,11 +613,10 @@ function dealCards() {
 }
 
 /**
- * Inicia uma nova rodada: limpa as jogadas/votos anteriores e envia uma nova pergunta.
+ * Inicia uma nova rodada: limpa as jogadas anteriores e envia uma nova pergunta.
  */
 function startRound() {
   gameState.plays = {}
-  gameState.votes = {}
 
   dealCards()
 
@@ -647,7 +643,7 @@ function revealCards() {
     question: gameState.currentQuestion,
   })
 
-  // ApÃ³s revelar, resolve automaticamente o vencedor da rodada.
+  // Após revelar, resolve automaticamente o vencedor da rodada.
   setTimeout(resolveRound, 900)
 }
 
@@ -667,7 +663,7 @@ function resolveRound() {
     LANGUAGES.find(c => c.name === played2)
 
   if (!card1 || !card2) {
-    console.warn("NÃ£o foi possÃ­vel resolver a rodada (carta invÃ¡lida):", { played1, played2 })
+    console.warn("Não foi possível resolver a rodada (carta inválida):", { played1, played2 })
     broadcast({ type: "draw", score: gameState.score, playerNames: gameState.playerNames })
     return
   }
@@ -706,69 +702,6 @@ function resolveRound() {
     score:       gameState.score,
     playerNames: gameState.playerNames,
     scores:      { 1: score1, 2: score2 },
-  })
-}
-
-/**
- * Processa o voto de um jogador.
- * Quando ambos votam no mesmo vencedor, atualiza o placar e verifica fim de jogo.
- * Se os votos divergirem, declara empate na rodada.
- *
- * @param {number} playerId - ID do jogador que votou (1 ou 2)
- * @param {number} winner   - ID do jogador votado como vencedor (1 ou 2)
- */
-function handleVote(playerId, winner) {
-  if (!winner || ![1, 2].includes(winner)) {
-    console.warn(`Voto inválido recebido do jogador ${playerId}:`, winner)
-    return
-  }
-
-  gameState.votes[playerId] = winner
-
-  // Notifica apenas o votante que seu voto foi registrado
-  gameState.players[playerId]?.send(JSON.stringify({
-    type: "voteRegistered",
-    winner,
-  }))
-
-  // Notifica ambos com o status atualizado de quem já votou
-  broadcast({
-    type:    "waitingVote",
-    votedBy: Object.keys(gameState.votes).map(Number),
-  })
-
-  // Aguarda o segundo voto se ainda não vieram os dois
-  const bothVoted = gameState.votes[1] && gameState.votes[2]
-  if (!bothVoted) return
-
-  // Ambos votaram — verifica consenso
-  const votesAgree = gameState.votes[1] === gameState.votes[2]
-
-  if (!votesAgree) {
-    broadcast({ type: "draw" })
-    return
-  }
-
-  // Consenso: incrementa o placar do vencedor
-  const finalWinner = gameState.votes[1]
-  gameState.score[finalWinner]++
-
-  // Verifica se o vencedor atingiu a pontuação de vitória
-  if (gameState.score[finalWinner] >= WIN_SCORE) {
-    broadcast({
-      type:        "gameover",
-      winner:      finalWinner,
-      playerNames: gameState.playerNames,
-      score:       gameState.score,
-    })
-    return
-  }
-
-  // Partida continua — envia placar atualizado
-  broadcast({
-    type:        "result",
-    score:       gameState.score,
-    playerNames: gameState.playerNames,
   })
 }
 
@@ -818,7 +751,7 @@ wss.on("connection", (ws) => {
 
           const inHand = gameState.hands?.[playerId]?.some(c => c.name === data.card)
           if (!inHand) {
-            console.warn(`Jogador ${playerId} tentou jogar uma carta que nÃ£o estÃ¡ na mÃ£o:`, data.card)
+            console.warn(`Jogador ${playerId} tentou jogar uma carta que não está na mão:`, data.card)
             return
           }
 
@@ -840,11 +773,6 @@ wss.on("connection", (ws) => {
           }
           break
         }
-
-        // Jogador enviou seu voto para o vencedor da rodada
-        case "vote":
-          console.warn(`Mensagem de voto ignorada (modo automatico). Jogador ${playerId}.`)
-          break
 
         // Jogador clicou em "Próxima rodada" (manual ou pelo timer)
         case "next":

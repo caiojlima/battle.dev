@@ -19,11 +19,10 @@ let playerNames = {}   // Mapa { 1: "nome", 2: "nome" } com ambos os jogadores
 // Estado da rodada atual
 let selectedCard   = null   // Nome da carta selecionada mas ainda não confirmada
 let confirmed      = false  // true após o jogador confirmar a carta da rodada
-let selectedVote   = null   // ID do jogador votado como vencedor (1 ou 2)
-let voteConfirmed  = false  // true após o jogador confirmar o voto
 
-// Timer de avanço automático para a próxima rodada (countdown de 3s)
+// Timer de avanço automático para a próxima rodada (countdown)
 let autoNextRoundTimer = null
+const AUTO_NEXT_ROUND_SECONDS = 10
 
 // Referência ao container de cartas — usado com frequência
 const cardsDiv = document.getElementById("cards")
@@ -51,9 +50,7 @@ const LANGUAGE_COLORS = {
   Elixir:     "#6e4a7e",
   Lua:        "#000080",
   Haskell:    "#5e5086",
-  COBOL:        "#00427e",
-  Elixir:       "#6e4a7e",
-  Haskell:      "#5e5086",
+  COBOL:      "#00427e",
   Perl:         "#39457e",
   R:            "#276DC3",
   MATLAB:       "#e16737",
@@ -251,20 +248,16 @@ function handleQuestion(data) {
   renderScore(data.score)
 
   // Esconde todos os controles de ação da rodada anterior
-  hide("vote")
+  hide("duel")
   hide("nextBtn")
   hide("confirmBtn")
-  hide("confirmVoteBtn")
 
   // Reseta o estado local da rodada
   selectedCard  = null
   confirmed     = false
-  selectedVote  = null
-  voteConfirmed = false
 
-  // Remove marcações visuais de seleção dos cards e dos botões de voto
+  // Remove marcações visuais de seleção dos cards
   document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"))
-  document.querySelectorAll("#vote button").forEach(b => b.classList.remove("voteSelected"))
 }
 
 /**
@@ -281,46 +274,41 @@ function handleWaiting(data) {
 }
 
 /**
- * "reveal" — ambos jogaram, hora de revelar as cartas e iniciar a votação.
- * Exibe as escolhas de cada jogador e os botões de votação com nomes dinâmicos.
+ * "reveal" — ambos jogaram, hora de revelar as cartas.
+ * Exibe as escolhas de cada jogador no painel de duelo.
  */
 function handleReveal(data) {
   const p1Name = playerNames[1] || "Jogador 1"
   const p2Name = playerNames[2] || "Jogador 2"
 
-  // Integra o resultado das cartas diretamente no painel de votação,
-  // eliminando o #result separado e tornando cada carta clicável como voto.
-  el("result").innerHTML = ""
   el("status").innerText = "Cartas reveladas! Calculando vencedor..."
 
-  el("vote").innerHTML = `
-    <p class="vote-title">Duelo da rodada</p>
-    <div class="vote-cards">
-      <div class="vote-card" id="voteCard1">
-        <span class="vote-player-name">${p1Name}</span>
-        <i class="vote-lang-icon devicon-${toDeviconSlug(data.player1)}-plain"></i>
-        <span class="vote-lang-name">${data.player1}</span>
+  el("duel").innerHTML = `
+    <p class="duel-title">Duelo da rodada</p>
+    <div class="duel-cards">
+      <div class="duel-card">
+        <span class="duel-player-name">${p1Name}</span>
+        <i class="duel-lang-icon devicon-${toDeviconSlug(data.player1)}-plain"></i>
+        <span class="duel-lang-name">${data.player1}</span>
       </div>
-      <div class="vote-vs-divider">VS</div>
-      <div class="vote-card" id="voteCard2">
-        <span class="vote-player-name">${p2Name}</span>
-        <i class="vote-lang-icon devicon-${toDeviconSlug(data.player2)}-plain"></i>
-        <span class="vote-lang-name">${data.player2}</span>
+      <div class="duel-vs-divider">VS</div>
+      <div class="duel-card">
+        <span class="duel-player-name">${p2Name}</span>
+        <i class="duel-lang-icon devicon-${toDeviconSlug(data.player2)}-plain"></i>
+        <span class="duel-lang-name">${data.player2}</span>
       </div>
     </div>
   `
-  show("vote", "block")
+  show("duel", "block")
 }
 
 /**
- * "result" — ambos votaram no mesmo vencedor, placar atualizado.
- * Esconde a votação e inicia o countdown para a próxima rodada.
+ * "result" — o servidor resolveu o vencedor da rodada, placar atualizado.
+ * Esconde o painel de duelo e inicia o countdown para a próxima rodada.
  */
 function handleResult(data) {
-  hide("vote")
+  hide("duel")
   renderScore(data.score)
-  el("status").innerText  = "Votação encerrada! Próxima rodada..."
-  el("nextBtn").innerText = "Próxima Rodada... 3s"
   show("nextBtn")
   startAutoNextRoundTimer()
 
@@ -331,40 +319,20 @@ function handleResult(data) {
     el("result").innerHTML = `Rodada: <strong>${winnerName}</strong> venceu!`
   }
 
-  el("status").innerText = "PrÃ³xima rodada..."
-  show("vote", "block")
+  el("status").innerText = "Próxima rodada..."
 }
 
 /**
- * "voteRegistered" — confirmação de que o voto deste jogador foi registrado.
- * Aguarda o adversário votar.
- */
-function handleVoteRegistered() {
-  el("status").innerText = `Seu voto foi registrado. Aguardando ${getOpponentName()} votar...`
-  updateScoreIndicators([], [playerId])
-}
-
-/**
- * "waitingVote" — atualiza os indicadores mostrando quem já votou.
- * Recebido pelo jogador que ainda não votou quando o adversário vota primeiro.
- */
-function handleWaitingVote(data) {
-  updateScoreIndicators([], data.votedBy || [])
-}
-
-/**
- * "draw" — os votos foram divergentes, rodada empatada sem ponto.
+ * "draw" — rodada empatada (sem ponto).
  * Inicia o countdown para a próxima rodada.
  */
 function handleDraw() {
-  el("status").innerText  = "Os votos foram diferentes. Rodada empatada!"
-  el("nextBtn").innerText = "Próxima Rodada... 3s"
+  hide("duel")
   show("nextBtn")
   startAutoNextRoundTimer()
 
   el("result").innerHTML = "Rodada empatada!"
-  el("status").innerText = "PrÃ³xima rodada..."
-  show("vote", "block")
+  el("status").innerText = "Próxima rodada..."
 }
 
 /**
@@ -382,7 +350,7 @@ function handleGameOver(data) {
   el("result").innerHTML = message
   el("status").innerText = "Fim de jogo"
 
-  hide("vote")
+  hide("duel")
   hide("nextBtn")
   show("rematchBtn")
 }
@@ -444,38 +412,6 @@ function confirmCard() {
 
   hide("confirmBtn")
   el("status").innerText = `Você escolheu: ${selectedCard} — Aguardando ${getOpponentName()} escolher...`
-}
-
-/**
- * Registra localmente o voto ao clicar num card de linguagem.
- * Destaca o card selecionado e exibe o botão de confirmar voto.
- * Bloqueado se o voto já foi confirmado.
- */
-function vote(winnerId) {
-  if (voteConfirmed) return
-
-  selectedVote = winnerId
-
-  // Destaca visualmente apenas o card clicado, remove dos demais
-  document.querySelectorAll(".vote-card").forEach(card => card.classList.remove("voteSelected"))
-  el(`voteCard${winnerId}`).classList.add("voteSelected")
-
-  show("confirmVoteBtn")
-}
-
-/**
- * Confirma o voto registrado e envia ao servidor.
- * Esconde os botões de votação após o envio.
- */
-function confirmVote() {
-  if (!selectedVote) return
-
-  voteConfirmed = true
-
-  sendMessage({ type: "vote", winner: selectedVote })
-
-  el("status").innerText = `Seu voto foi registrado. Aguardando ${getOpponentName()} votar...`
-  hide("vote")
 }
 
 /**
@@ -565,8 +501,6 @@ function resetToInitial() {
   // Reseta estado da rodada
   selectedCard  = null
   confirmed     = false
-  selectedVote  = null
-  voteConfirmed = false
   playerId      = null
   playerNames   = {}
 
@@ -577,14 +511,12 @@ function resetToInitial() {
   el("score").innerHTML    = `Jogador 1: <span id="p1">0</span> | Jogador 2: <span id="p2">0</span>`
   el("result").innerHTML   = ""
 
-  // Limpa #vote ANTES de tentar esconder confirmVoteBtn
-  // (confirmVoteBtn é injetado dinamicamente dentro de #vote no handleReveal)
-  el("vote").innerHTML     = ""
-  el("vote").style.display = "none"
+  // Limpa o painel de duelo/revelação
+  el("duel").innerHTML     = ""
+  el("duel").style.display = "none"
 
   hide("nextBtn")
   hide("confirmBtn")
-  hide("confirmVoteBtn") // null-safe pela função hide()
   hide("rematchBtn")
 }
 
@@ -677,12 +609,11 @@ function renderScore(score) {
 
 /**
  * Atualiza o placar adicionando o indicador de ✓ para os jogadores
- * que já jogaram ou votaram na rodada atual, mantendo o layout VS.
+ * que já jogaram na rodada atual, mantendo o layout VS.
  *
  * @param {number[]} playedBy - IDs dos jogadores que já jogaram a carta
- * @param {number[]} votedBy  - IDs dos jogadores que já votaram
  */
-function updateScoreIndicators(playedBy = [], votedBy = []) {
+function updateScoreIndicators(playedBy = []) {
   const myId  = playerId ?? 1
   const oppId = myId === 1 ? 2 : 1
 
@@ -692,9 +623,8 @@ function updateScoreIndicators(playedBy = [], votedBy = []) {
   const myScore  = el(`p${myId}`)?.innerText  ?? "0"
   const oppScore = el(`p${oppId}`)?.innerText ?? "0"
 
-  const isPlayPhase = playedBy.length > 0
-  const myDone  = isPlayPhase ? playedBy.includes(myId)  : votedBy.includes(myId)
-  const oppDone = isPlayPhase ? playedBy.includes(oppId) : votedBy.includes(oppId)
+  const myDone  = playedBy.includes(myId)
+  const oppDone = playedBy.includes(oppId)
 
   el("score").innerHTML =
     buildScoreSide(myName,  myScore,  true,  `p${myId}`,  myDone) +
@@ -707,21 +637,22 @@ function updateScoreIndicators(playedBy = [], votedBy = []) {
 // =============================================================================
 
 /**
- * Inicia um countdown de 3 segundos e avança automaticamente para a próxima rodada.
+ * Inicia um countdown (AUTO_NEXT_ROUND_SECONDS) e avança automaticamente para a próxima rodada.
  * Atualiza o texto do botão a cada segundo para dar feedback visual ao jogador.
  */
 function startAutoNextRoundTimer() {
-  let countdown = 10
   const btn = el("nextBtn")
+  let countdown = AUTO_NEXT_ROUND_SECONDS
+  btn.innerText = `Próxima rodada... ${countdown}s`
 
   autoNextRoundTimer = setInterval(() => {
     countdown--
-    btn.innerText = `Próxima Rodada... ${countdown}s`
-
     if (countdown <= 0) {
       cancelAutoNextRoundTimer()
       nextRound()
+      return
     }
+    btn.innerText = `Próxima rodada... ${countdown}s`
   }, 1000)
 }
 
