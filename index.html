@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+<title>Super Trunfo Dev</title>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
+
+<style>
+
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+padding:30px;
+}
+
+#status{
+margin:15px;
+font-size:16px;
+color:#bbb;
+}
+
+#cards{
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:20px;
+margin:30px;
+position: relative;
+align-items: flex-start;
+}
+
+.card{
+
+width:160px;
+height:260px;
+
+border-radius:14px;
+
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+
+padding:10px;
+
+cursor:pointer;
+
+color:white;
+
+box-shadow:0 6px 16px rgba(0,0,0,.6);
+
+transition: transform 0.25s ease, box-shadow 0.25s ease;
+transform-origin: center top;
+opacity: 0;
+transform: translateY(-80px) scale(0.8);
+animation: dealCard 0.5s ease forwards;
+flex-shrink: 0;
+}
+
+.personality{
+  font-size:13px;
+  opacity:.8;
+  margin-bottom:10px;
+}
+
+.stats{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.stat{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+}
+
+.bar{
+  flex:1;
+  height:6px;
+  background:#222;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.fill{
+  height:100%;
+  background:linear-gradient(90deg,#00c6ff,#0072ff);
+  transition:.3s;
+}
+
+.card:hover{
+transform:scale(1.08);
+}
+
+.card-logo{
+font-size:55px;
+text-align:center;
+}
+
+.selected{
+
+border:3px solid white;
+
+box-shadow:
+0 0 10px white,
+0 0 20px white,
+0 0 40px white;
+
+transform: translateY(-12px) scale(1.12);
+
+z-index: 10;
+}
+
+button{
+
+padding:10px 20px;
+
+border:none;
+border-radius:8px;
+
+font-size:16px;
+
+cursor:pointer;
+
+margin:10px;
+
+}
+
+#rematchBtn{
+display:none;
+
+margin-top:20px;
+
+padding:13px 44px;
+
+font-size:15px;
+font-weight:600;
+letter-spacing:1px;
+
+background:linear-gradient(135deg,#2ecc71,#27ae60);
+
+color:#fff;
+
+border:none;
+border-radius:10px;
+
+cursor:pointer;
+
+transition:.2s;
+
+box-shadow:0 6px 20px rgba(46,204,113,.35);
+}
+
+#rematchBtn:hover{
+transform:translateY(-2px);
+box-shadow:0 10px 28px rgba(46,204,113,.5);
+}
+
+#confirmBtn{
+background:#2ecc71;
+display:none;
+}
+
+#confirmVoteBtn{
+background:#2ecc71;
+display:none;
+}
+
+#nextBtn{
+background:#3498db;
+display:none;
+}
+
+#vote{
+display:none;
+}
+
+.voteSelected{
+background:#3498db !important;
+border: 3px solid #2ecc71 !important;
+}
+
+#loginScreen{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:#111;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:1000;
+gap:6px;
+}
+
+#loginForm{
+display:flex;
+flex-direction:column;
+gap:18px;
+align-items:center;
+}
+
+#loginScreen h1{
+font-size:2.4rem;
+letter-spacing:2px;
+margin:0 0 8px 0;
+background:linear-gradient(90deg,#3498db,#2ecc71);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+background-clip:text;
+}
+
+#playerNameInput{
+padding:13px 18px;
+font-size:16px;
+border:2px solid #333;
+border-radius:10px;
+width:280px;
+background:#1a1a1a;
+color:white;
+text-align:center;
+transition:.2s;
+}
+
+#playerNameInput:focus{
+outline:none;
+border-color:#2ecc71;
+box-shadow:0 0 0 3px rgba(46,204,113,.2);
+}
+
+#startGameBtn{
+padding:13px 44px;
+font-size:16px;
+background:linear-gradient(135deg,#2ecc71,#27ae60);
+color:white;
+border:none;
+border-radius:10px;
+cursor:pointer;
+transition:.2s;
+letter-spacing:.5px;
+font-weight:600;
+}
+
+#startGameBtn:hover{
+transform:translateY(-2px);
+box-shadow:0 6px 20px rgba(46,204,113,.4);
+}
+
+/* ── Waiting screen ── */
+#waitingScreen{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:#111;
+display:none;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:999;
+gap:28px;
+}
+
+#waitingScreen h1{
+font-size:2.4rem;
+letter-spacing:2px;
+margin:0;
+background:linear-gradient(90deg,#3498db,#2ecc71);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+background-clip:text;
+}
+
+.waiting-label{
+font-size:1.05rem;
+color:#aaa;
+display:flex;
+align-items:center;
+letter-spacing:.5px;
+}
+
+/* animated dots */
+.dot{
+display:inline-block;
+width:7px;height:7px;
+border-radius:50%;
+background:#2ecc71;
+margin:0 3px 1px;
+opacity:0;
+animation: dotBounce 1.5s ease-in-out infinite;
+}
+.dot:nth-child(1){ animation-delay:0s; }
+.dot:nth-child(2){ animation-delay:0.3s; }
+.dot:nth-child(3){ animation-delay:0.6s; }
+
+@keyframes dotBounce{
+0%,100%{ opacity:0; transform:translateY(0); }
+30%{ opacity:1; transform:translateY(-6px); }
+60%{ opacity:.5; transform:translateY(0); }
+}
+
+/* floating card animation */
+.card-spin{
+width:64px;height:92px;
+border-radius:12px;
+background:linear-gradient(135deg,#1a3a5c,#2c5282);
+border:2px solid rgba(52,152,219,.6);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:2rem;
+animation: cardFloat 2.2s ease-in-out infinite;
+box-shadow:0 8px 30px rgba(52,152,219,.25);
+}
+
+@keyframes cardFloat{
+0%,100%{ transform:translateY(0) rotate(-4deg); }
+50%{ transform:translateY(-14px) rotate(4deg); }
+}
+
+/* ── Scoreboard VS layout ── */
+#score{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:0;
+margin:12px auto;
+max-width:480px;
+}
+
+.score-side{
+flex:1;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:4px;
+padding:10px 16px;
+border-radius:10px;
+background:rgba(255,255,255,0.04);
+}
+
+.score-side.is-you{
+background:rgba(52,152,219,0.12);
+border:1px solid rgba(52,152,219,0.3);
+}
+
+.score-name{
+font-size:0.85rem;
+color:#aaa;
+letter-spacing:0.5px;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+max-width:140px;
+}
+
+.score-side.is-you .score-name{
+color:#fff;
+font-weight:600;
+}
+
+.score-points{
+font-size:2rem;
+font-weight:700;
+line-height:1;
+color:#fff;
+}
+
+.score-side.is-you .score-points{
+color:#3498db;
+}
+
+.score-check{
+font-size:0.75rem;
+color:#2ecc71;
+height:14px;
+}
+
+.score-vs{
+font-size:1rem;
+font-weight:700;
+color:#444;
+letter-spacing:2px;
+padding:0 14px;
+flex-shrink:0;
+margin-bottom:18px;
+}
+
+/* ── Vote panel ── */
+#vote{
+display:none;
+margin:24px auto;
+max-width:520px;
+}
+
+.vote-title{
+font-size:0.8rem;
+font-weight:600;
+letter-spacing:2px;
+text-transform:uppercase;
+color:#555;
+margin:0 0 14px 0;
+}
+
+.vote-cards{
+display:flex;
+align-items:stretch;
+gap:0;
+border-radius:12px;
+overflow:hidden;
+box-shadow:0 8px 32px rgba(0,0,0,.5);
+padding: 5px;
+}
+
+/* Each half is a clickable vote target */
+.vote-card{
+flex:1;
+padding:20px 16px;
+cursor:pointer;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:8px;
+background:#1a1a1a;
+border:2px solid transparent;
+transition:background .15s, border-color .15s, transform .15s;
+position:relative;
+}
+
+.vote-card:first-child{
+border-radius:12px 0 0 12px;
+border-right:1px solid #2a2a2a;
+}
+
+.vote-card:last-child{
+border-radius:0 12px 12px 0;
+border-left:1px solid #2a2a2a;
+}
+
+.vote-card:hover{
+background:#222;
+transform:translateY(-2px);
+}
+
+/* Selected state */
+.vote-card.voteSelected{
+background:#1a2a1a !important;
+border-color:#2ecc71 !important;
+transform:translateY(-3px);
+}
+
+.vote-player-name{
+font-size:0.75rem;
+font-weight:600;
+letter-spacing:1px;
+text-transform:uppercase;
+color:#666;
+}
+
+.vote-card.voteSelected .vote-player-name{
+color:#2ecc71;
+}
+
+.vote-lang-name{
+font-size:1.2rem;
+font-weight:700;
+color:#fff;
+}
+
+.vote-lang-icon{
+font-size:2.4rem;
+opacity:.9;
+}
+
+/* VS divider */
+.vote-vs-divider{
+display:flex;
+align-items:center;
+justify-content:center;
+background:#111;
+padding:0 6px;
+font-size:0.7rem;
+font-weight:700;
+color:#333;
+letter-spacing:1px;
+flex-shrink:0;
+z-index:1;
+}
+
+/* Confirm button */
+#confirmVoteBtn{
+display:none;
+margin-top:14px;
+width:100%;
+max-width:520px;
+padding:13px;
+font-size:0.95rem;
+font-weight:600;
+letter-spacing:1px;
+background:linear-gradient(135deg,#2ecc71,#27ae60);
+color:#fff;
+border:none;
+border-radius:10px;
+cursor:pointer;
+transition:opacity .2s, transform .2s;
+}
+
+#confirmVoteBtn:hover{
+opacity:.9;
+transform:translateY(-1px);
+}
+
+.card-info{
+font-size:11px;
+text-align:left;
+margin-top:6px;
+line-height:1.2;
+
+overflow:hidden;
+}
+
+.card-info p{
+margin:2px 0;
+word-wrap:break-word;
+}
+
+@keyframes dealCard {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- Login screen -->
+<div id="loginScreen">
+  <h1>Super Trunfo Dev</h1>
+  <div id="loginForm">
+    <p style="color:#aaa;font-size:15px;margin:0 0 10px 0;">Digite seu nome para começar</p>
+    <input 
+      type="text" 
+      id="playerNameInput" 
+      placeholder="Seu nome..."
+      onkeypress="if(event.key==='Enter') startGame()"
+    />
+    <button id="startGameBtn" onclick="startGame()">Começar</button>
+  </div>
+</div>
+
+<!-- Waiting for opponent screen -->
+<div id="waitingScreen">
+  <div class="card-spin">&#127183;</div>
+  <h1>Super Trunfo Dev</h1>
+  <p id="waitingPlayerName" style="color:#2ecc71;font-size:1rem;margin:0;letter-spacing:1px;"></p>
+  <p id="playerCount" style="color:#aaa;font-size:14px;margin:0;"></p>
+  <div class="waiting-label">
+    Aguardando jogadores
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
+  </div>
+</div>
+
+<h1>Super Trunfo Dev</h1>
+
+<h2 id="question">Aguardando jogadores...</h2>
+
+<div id="status"></div>
+
+<div id="score">
+Jogador1: <span id="p1">0</span>
+|
+Jogador2: <span id="p2">0</span>
+</div>
+
+<div id="cards"></div>
+
+<button id="confirmBtn" onclick="confirmCard()">
+Confirmar seleção
+</button>
+
+<h2 id="result"></h2>
+
+<div id="vote">
+</div>
+
+<button id="nextBtn" onclick="nextRound()">
+Próxima rodada
+</button>
+
+<button id="rematchBtn" onclick="rematch()" style="display:none;">
+Jogar novamente
+</button>
+
+<script src="client.js"></script>
+
+
+</body>
+</html>
