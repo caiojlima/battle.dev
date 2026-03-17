@@ -22,6 +22,11 @@ font-size:16px;
 color:#bbb;
 }
 
+#result{
+display:none;
+margin:10px 0 0 0;
+}
+
 #cards{
 display:flex;
 flex-wrap:wrap;
@@ -412,6 +417,49 @@ margin:10px auto 0 auto;
 color:#aaa;
 font-weight:600;
 letter-spacing:.2px;
+}
+
+.round-placeholder{
+width:100%;
+max-width:520px;
+margin:10px auto 0 auto;
+padding:16px 14px;
+border-radius:12px;
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(255,255,255,0.08);
+color:#aaa;
+font-weight:600;
+letter-spacing:.2px;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+}
+
+.round-stage{
+width:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:12px;
+}
+
+.sent-preview{
+display:flex;
+justify-content:center;
+margin:12px auto 0 auto;
+}
+
+.sent-preview .card{
+cursor:default;
+pointer-events:none;
+opacity:1;
+transform:none;
+animation:none;
+}
+
+.sent-preview .card:hover{
+transform:none;
 }
 
 .calc-duel{

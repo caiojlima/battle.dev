@@ -19,10 +19,11 @@ let playerNames = {}   // Mapa { 1: "nome", 2: "nome" } com ambos os jogadores
 // Estado da rodada atual
 let selectedCard   = null   // Nome da carta selecionada mas ainda não confirmada
 let confirmed      = false  // true após o jogador confirmar a carta da rodada
+let currentHand    = []     // Cartas recebidas nesta rodada (para preview/local lookup)
 
 // Timer de avanço automático para a próxima rodada (countdown)
 let autoNextRoundTimer = null
-const AUTO_NEXT_ROUND_SECONDS = 10
+const AUTO_NEXT_ROUND_SECONDS = 15
 
 // Controle da animação de "cálculo de resultado" (entre reveal e result/draw)
 const RESULT_CALC_MIN_MS = 1500
@@ -98,6 +99,14 @@ function getOpponentName() {
  */
 function el(id) {
   return document.getElementById(id)
+}
+
+function setResultHtml(html) {
+  const resultEl = el("result")
+  if (!resultEl) return
+
+  resultEl.innerHTML = html || ""
+  resultEl.style.display = resultEl.textContent.trim() ? "block" : "none"
 }
 
 function escapeHtml(value) {
@@ -245,6 +254,7 @@ function handleJoined(data) {
 }
 
 function handleNewCards(data) {
+  currentHand = Array.isArray(data.languages) ? data.languages : []
   renderCards(data.languages)
 }
 
@@ -283,11 +293,11 @@ function handleQuestion(data) {
   // Sem isso, um clique manual em "Próxima" enviaria "next" e o timer ainda
   // ativo dispararia um segundo "next" segundos depois, resetando a rodada 2x.
   cancelAutoNextRoundTimer()
-  stopResultCalcAnimation({ clearResult: true })
+  stopResultCalcAnimation({ clearArea: true, clearText: true })
 
   el("question").innerText = data.question
   el("status").innerText   = "Escolha uma carta"
-  el("result").innerHTML   = ""
+  setResultHtml("")
 
   renderScore(data.score)
 
@@ -312,7 +322,8 @@ function handleWaiting(data) {
 
   // Só exibe mensagem de espera para o jogador que acabou de jogar
   if (data.whoPlayed === playerId) {
-    el("status").innerText = `Você escolheu: ${selectedCard} — Aguardando ${getOpponentName()} escolher...`
+    // Evita redundância: a mensagem já aparece dentro da área de cartas.
+    el("status").innerText = ""
   }
 }
 
@@ -444,8 +455,22 @@ function confirmCard() {
 
   sendMessage({ type: "play", card: selectedCard })
 
+  const chosen = currentHand.find(c => c?.name === selectedCard) || null
+
+  // Esconde as opções assim que a carta é confirmada.
+  cardsDiv.innerHTML = `
+    <div class="round-stage">
+      <div class="round-placeholder">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Carta enviada. Aguardando o adversário...</span>
+      </div>
+      ${chosen ? `<div class="sent-preview">${buildPreviewHandCardHtml(chosen, playerName || "Você")}</div>` : ""}
+    </div>
+  `
+
   hide("confirmBtn")
-  el("status").innerText = `Você escolheu: ${selectedCard} — Aguardando ${getOpponentName()} escolher...`
+  // Evita redundância: a mensagem já aparece dentro da área de cartas.
+  el("status").innerText = ""
 }
 
 /**
@@ -466,8 +491,17 @@ function rematch() {
 
   hide("rematchBtn")
 
-  el("result").innerHTML = ""
-  el("status").innerText = "⏳ Você pediu revanche. Aguardando o adversário..."
+  setResultHtml("")
+  // Mostra feedback na mesma área das cartas, evitando texto redundante no topo.
+  cardsDiv.innerHTML = `
+    <div class="round-stage">
+      <div class="round-placeholder">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Aguardando o adversário aceitar a revanche...</span>
+      </div>
+    </div>
+  `
+  el("status").innerText = ""
 }
 
 /**
@@ -531,20 +565,21 @@ function resetToInitial() {
   // Cancela o countdown antes de qualquer outra coisa
   // (evita que o timer dispare um "next" enquanto o estado já foi limpo)
   cancelAutoNextRoundTimer()
-  stopResultCalcAnimation({ clearResult: true })
+  stopResultCalcAnimation({ clearArea: true, clearText: true })
 
   // Reseta estado da rodada
   selectedCard  = null
   confirmed     = false
   playerId      = null
   playerNames   = {}
+  currentHand   = []
 
   // Limpa a UI
   cardsDiv.innerHTML       = ""
   el("question").innerText = "Aguardando jogadores..."
   el("status").innerText   = ""
   el("score").innerHTML    = `Jogador 1: <span id="p1">0</span> | Jogador 2: <span id="p2">0</span>`
-  el("result").innerHTML   = ""
+  setResultHtml("")
 
   hide("nextBtn")
   hide("confirmBtn")
@@ -708,33 +743,43 @@ function startResultCalcAnimation({ p1Card = null, p2Card = null } = {}) {
   const card2 = p2Card && typeof p2Card === "object" ? p2Card : null
 
   resultCalcStartedAt = Date.now()
-  el("result").innerHTML = `
-    <div id="chosenCards" class="calc-duel">
-      ${card1 ? buildPreviewHandCardHtml(card1, p1Name) : ""}
-      <div class="calc-vs">VS</div>
-      ${card2 ? buildPreviewHandCardHtml(card2, p2Name) : ""}
-    </div>
-    <div id="roundOutcome"></div>
-    <div class="result-loading" aria-live="polite">
-      <span class="spinner" aria-hidden="true"></span>
-      <span>Calculando resultado...</span>
+  cardsDiv.innerHTML = `
+    <div class="round-stage">
+      <div id="chosenCards" class="calc-duel">
+        ${card1 ? buildPreviewHandCardHtml(card1, p1Name) : ""}
+        <div class="calc-vs">VS</div>
+        ${card2 ? buildPreviewHandCardHtml(card2, p2Name) : ""}
+      </div>
+      <div id="roundOutcome"></div>
+      <div class="result-loading" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Calculando resultado...</span>
+      </div>
     </div>
   `
   el("status").innerText = "Aguarde o resultado..."
 }
 
-function stopResultCalcAnimation({ clearResult = false, keepChosenCards = true } = {}) {
+function stopResultCalcAnimation({ clearArea = false, clearText = false, keepChosenCards = true } = {}) {
   if (pendingResultTimeout) {
     clearTimeout(pendingResultTimeout)
     pendingResultTimeout = null
   }
   resultCalcStartedAt = null
-  if (clearResult) {
-    el("result").innerHTML = ""
-    return
+  if (clearArea) {
+    // Só limpa a área de cartas se ela estiver mostrando UI de resultado/cálculo.
+    // Isso evita apagar as opções caso o servidor envie "question" depois de "newCards".
+    const hasCalcUi = Boolean(
+      cardsDiv.querySelector("#chosenCards, #roundOutcome, .result-loading, .round-placeholder")
+    )
+    if (hasCalcUi) cardsDiv.innerHTML = ""
   }
+  if (clearText) {
+    setResultHtml("")
+  }
+  if (clearArea || clearText) return
 
-  const loading = document.querySelector("#result .result-loading")
+  const loading = document.querySelector("#cards .result-loading")
   if (loading) loading.remove()
 
   if (!keepChosenCards) {
@@ -766,7 +811,7 @@ function setRoundOutcomeHtml(html) {
     container.innerHTML = html
     return
   }
-  el("result").innerHTML = html
+  setResultHtml(html)
 }
 
 // =============================================================================

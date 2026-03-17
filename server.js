@@ -43,7 +43,7 @@ const server = http.createServer((req, res) => {
 // CONSTANTES DO JOGO
 // =============================================================================
 
-const WIN_SCORE       = 7  // Pontos necessários para vencer
+const WIN_SCORE       = 5  // Pontos necessários para vencer
 const CARDS_PER_PLAYER = 6  // Quantas cartas cada jogador recebe por partida
 
 // =============================================================================
