@@ -1,5 +1,11 @@
 import { QUESTION_WEIGHTS } from "./constants.js"
 
+/**
+ * Inferência heurística de pesos a partir do texto da pergunta.
+ *
+ * Objetivo: quando uma pergunta não estiver no mapa `QUESTION_WEIGHTS`,
+ * ainda assim conseguimos pontuar cartas com base em palavras-chave.
+ */
 export function inferWeightsFromQuestion(question) {
   if (!question) return null
 
@@ -49,13 +55,23 @@ export function getQuestionWeights(question) {
   return QUESTION_WEIGHTS[question] || inferWeightsFromQuestion(question)
 }
 
-export function getWeightedScore(card, question) {
-  const weights = getQuestionWeights(question)
+/**
+ * Computa score linear (soma ponderada) dado um objeto de stats e um mapa de pesos.
+ *
+ * - Stats ausentes contam como 0.
+ * - Mantém comportamento simples (multiplicação direta), para espelhar o que o server usa.
+ */
+export function computeWeightedScore(stats, weights) {
   if (!weights) return 0
 
   return Object.entries(weights).reduce((total, [stat, weight]) => {
-    return total + (card.stats?.[stat] || 0) * weight
+    return total + ((stats?.[stat] || 0) * weight)
   }, 0)
+}
+
+export function getWeightedScore(card, question) {
+  const weights = getQuestionWeights(question)
+  return computeWeightedScore(card?.stats, weights)
 }
 
 export function pickRoundQuestion(questions, usedQuestions) {
@@ -75,4 +91,3 @@ export function pickRoundQuestion(questions, usedQuestions) {
   usedQuestions.add(question)
   return question
 }
-

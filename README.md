@@ -22,6 +22,8 @@ Dica: para testar multiplayer local, abra a URL em duas abas/janelas.
 
 - `npm start` — inicia o servidor (`server.js`)
 - `npm run dev` — atalho para iniciar o servidor em modo dev
+- `npm test` — roda testes automatizados (Vitest)
+- `npm run test:coverage` — gera relatório de coverage em `coverage/`
 
 ## Como funciona
 
@@ -49,9 +51,17 @@ Este projeto precisa rodar como **Web Service** (Node) que mantenha conexão Web
 
 - `server.js` — servidor HTTP + WebSocket (entrypoint)
 - `server/room-store.js` — gerenciamento de salas/estado e helpers de broadcast/reset
+- `server/game-engine.js` — engine do jogo (rodadas, reveal, pontuação, timer/auto-pick)
+- `server/game-service.js` — roteador de mensagens WS (join/play/next/rematch/disconnect)
 - `game/constants.js` — constantes e dados (cartas, perguntas, pesos)
 - `game/scoring.js` — lógica de pontuação e seleção de perguntas
 - `client.js` — entrypoint do cliente (carrega módulos)
 - `client/` — módulos do cliente (UI, estado, WebSocket, telas)
 - `index.html` — interface (HTML + CSS)
+
+## Testes (Vitest)
+
+- Estrutura: `tests/unit` e `tests/integration`
+- Mocks: `tests/mocks/socket.mock.js`
+- Coverage: requer `@vitest/coverage-v8` (instalado como devDependency)
 

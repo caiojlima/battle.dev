@@ -1,12 +1,19 @@
 {
   "name": "battle-dev",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "node scripts/vitest.mjs",
+    "test:coverage": "node scripts/vitest.mjs --coverage",
+    "test:raw": "vitest"
   },
   "dependencies": {
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.0",
+    "vitest": "^4.1.0"
   }
 }
