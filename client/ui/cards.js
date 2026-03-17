@@ -1,6 +1,6 @@
 import { escapeHtml, formatStatName, getColor } from "../utils.js"
 
-export function buildPreviewHandCardHtml(lang, ownerName) {
+export function buildPreviewHandCardHtml(lang) {
   const name = lang?.name ?? ""
   const personality = lang?.personality ?? ""
   const stats = lang?.stats ?? {}
@@ -19,11 +19,6 @@ export function buildPreviewHandCardHtml(lang, ownerName) {
       <p class="personality">
         ${escapeHtml(personality)}
       </p>
-
-      <div class="card-info">
-        <p><strong>Jogador:</strong> ${escapeHtml(ownerName)}</p>
-      </div>
-
       <div class="stats">
         ${Object.entries(stats)
           .map(
@@ -79,4 +74,3 @@ export function buildHandCardHtml(lang, index, isSelected) {
     </div>
   `
 }
-

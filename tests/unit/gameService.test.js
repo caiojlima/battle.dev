@@ -16,11 +16,16 @@ describe("server/game-service", () => {
   let roomStore
   let engine
   let service
+  let timers
 
   beforeEach(() => {
     roomStore = new RoomStore()
     engine = createEngineMock()
-    service = createGameService({ roomStore, engine })
+    timers = {
+      setTimeout: vi.fn((cb) => cb),
+      clearTimeout: vi.fn(),
+    }
+    service = createGameService({ roomStore, engine, timers, rematchDecisionTimeoutMs: 15_000 })
   })
 
   it("handleJoin deve rejeitar nome vazio", () => {
@@ -61,18 +66,75 @@ describe("server/game-service", () => {
     expect(engine.startRound).toHaveBeenCalled()
   })
 
-  it("rematch deve enviar waitingRematch até ter 2 votos", () => {
+  it("rematch deve iniciar janela de aceitação e depois iniciar a nova partida no segundo voto", () => {
     const p1 = createMockSocket()
     const p2 = createMockSocket()
     service.handleMessage(p1, JSON.stringify({ type: "join", name: "A" }))
     service.handleMessage(p2, JSON.stringify({ type: "join", name: "B" }))
 
     service.handleMessage(p1, JSON.stringify({ type: "rematch" }))
+    expect(lastMessageOfType(p1, "rematchPending")).toBeTruthy()
     expect(lastMessageOfType(p2, "waitingRematch")).toBeTruthy()
+    expect(timers.setTimeout).toHaveBeenCalledTimes(1)
     expect(engine.startRound).not.toHaveBeenCalled()
 
     service.handleMessage(p2, JSON.stringify({ type: "rematch" }))
     expect(engine.startRound).toHaveBeenCalledTimes(1)
+    expect(timers.clearTimeout).toHaveBeenCalled()
+  })
+
+  it("rematch repetido pelo mesmo jogador não deve aceitar automaticamente", () => {
+    const p1 = createMockSocket()
+    const p2 = createMockSocket()
+    service.handleMessage(p1, JSON.stringify({ type: "join", name: "A" }))
+    service.handleMessage(p2, JSON.stringify({ type: "join", name: "B" }))
+
+    service.handleMessage(p1, JSON.stringify({ type: "rematch" }))
+    service.handleMessage(p1, JSON.stringify({ type: "rematch" }))
+
+    expect(engine.startRound).not.toHaveBeenCalled()
+  })
+
+  it("declineRematch deve devolver ambos ao lobby", () => {
+    const p1 = createMockSocket()
+    const p2 = createMockSocket()
+    service.handleMessage(p1, JSON.stringify({ type: "join", name: "A" }))
+    service.handleMessage(p2, JSON.stringify({ type: "join", name: "B" }))
+
+    service.handleMessage(p1, JSON.stringify({ type: "declineRematch" }))
+
+    expect(lastMessageOfType(p1, "lobbyReturned")).toMatchObject({ reason: "rematchDeclined" })
+    expect(lastMessageOfType(p2, "lobbyReturned")).toMatchObject({ reason: "rematchDeclined" })
+    expect(p1.roomId).toBeNull()
+    expect(p2.roomId).toBeNull()
+  })
+
+  it("timeout da revanche deve devolver ambos ao lobby", () => {
+    const timeoutCallbacks = []
+    service = createGameService({
+      roomStore,
+      engine,
+      rematchDecisionTimeoutMs: 15_000,
+      timers: {
+        setTimeout: vi.fn((cb) => {
+          timeoutCallbacks.push(cb)
+          return cb
+        }),
+        clearTimeout: vi.fn(),
+      },
+    })
+
+    const p1 = createMockSocket()
+    const p2 = createMockSocket()
+    service.handleMessage(p1, JSON.stringify({ type: "join", name: "A" }))
+    service.handleMessage(p2, JSON.stringify({ type: "join", name: "B" }))
+
+    service.handleMessage(p1, JSON.stringify({ type: "rematch" }))
+    timeoutCallbacks[0]()
+
+    expect(lastMessageOfType(p1, "lobbyReturned")).toMatchObject({ reason: "rematchTimeout" })
+    expect(lastMessageOfType(p2, "lobbyReturned")).toMatchObject({ reason: "rematchTimeout" })
+    expect(roomStore.get("1")).toBeUndefined()
   })
 
   it("handleClose deve notificar oponente e limpar sala", () => {
@@ -86,9 +148,7 @@ describe("server/game-service", () => {
 
     expect(lastMessageOfType(p2, "playerDisconnected")).toBeTruthy()
 
-    // sala deve ser removida quando vazia
     service.handleClose(p2)
     expect(roomStore.get(roomId)).toBeUndefined()
   })
 })
-

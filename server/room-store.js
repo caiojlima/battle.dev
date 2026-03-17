@@ -12,6 +12,9 @@ export class RoomStore {
       plays: {}, // { 1: "Lang", 2: "Lang" }
       score: { 1: 0, 2: 0 },
       rematchVotes: 0,
+      rematchRequestedBy: null,
+      rematchRequestEndsAt: null,
+      rematchDecisionTimeout: null,
       currentQuestion: null,
       usedQuestions: new Set(),
       opponentPickTimeout: null,
@@ -47,6 +50,11 @@ export class RoomStore {
 }
 
 export function resetMatchData(room) {
+  if (room.rematchDecisionTimeout) {
+    clearTimeout(room.rematchDecisionTimeout)
+    room.rematchDecisionTimeout = null
+  }
+
   if (room.opponentPickTimeout) {
     clearTimeout(room.opponentPickTimeout)
     room.opponentPickTimeout = null
@@ -56,6 +64,8 @@ export function resetMatchData(room) {
   room.plays = {}
   room.score = { 1: 0, 2: 0 }
   room.rematchVotes = 0
+  room.rematchRequestedBy = null
+  room.rematchRequestEndsAt = null
   room.currentQuestion = null
   room.usedQuestions = new Set()
   room.roundResolutionStarted = false

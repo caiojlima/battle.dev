@@ -21,6 +21,7 @@ function createDomFixture() {
   const confirmBtn = createMockElement({ id: "confirmBtn", tagName: "BUTTON" })
   const nextBtn = createMockElement({ id: "nextBtn", tagName: "BUTTON" })
   const rematchBtn = createMockElement({ id: "rematchBtn", tagName: "BUTTON" })
+  const declineRematchBtn = createMockElement({ id: "declineRematchBtn", tagName: "BUTTON" })
 
   const cards = createCardsContainer()
 
@@ -39,10 +40,10 @@ function createDomFixture() {
     confirmBtn,
     nextBtn,
     rematchBtn,
+    declineRematchBtn,
     cards,
   })
 
-  // Evita efeitos colaterais
   globalThis.alert = vi.fn()
   globalThis.document.querySelectorAll = () => []
 
@@ -82,7 +83,6 @@ describe("client/app", () => {
     const socket = { send: vi.fn() }
     initApp({ socket })
 
-    // Mock de elementos internos do banner para cobrir o caminho onde já existe `.timer-ring`
     const ring = { style: { setProperty: vi.fn() } }
     const seconds = { textContent: "" }
     const text = { textContent: "" }
@@ -172,16 +172,19 @@ describe("client/app", () => {
   })
 
   it("handleResult e handleGameOver devem escrever resultado", () => {
-    const { result, rematchBtn } = (() => {
+    const { result, rematchBtn, declineRematchBtn } = (() => {
       const fixture = createDomFixture()
-      // adiciona result e rematchBtn no retorno
-      return { ...fixture, result: globalThis.document.getElementById("result"), rematchBtn: globalThis.document.getElementById("rematchBtn") }
+      return {
+        ...fixture,
+        result: globalThis.document.getElementById("result"),
+        rematchBtn: globalThis.document.getElementById("rematchBtn"),
+        declineRematchBtn: globalThis.document.getElementById("declineRematchBtn"),
+      }
     })()
 
     const socket = { send: vi.fn() }
     initApp({ socket })
 
-    // garante estado básico para calcular nome do adversário
     socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
     socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
 
@@ -207,6 +210,7 @@ describe("client/app", () => {
     })
     vi.advanceTimersByTime(2000)
     expect(rematchBtn.style.display).toBe("inline-block")
+    expect(declineRematchBtn.style.display).toBe("inline-block")
   })
 
   it("playerCount deve atualizar texto para 1 e N jogadores", () => {
@@ -225,12 +229,14 @@ describe("client/app", () => {
     expect(playerCount.innerText).toContain("3 jogadores")
   })
 
-  it("waitingRematch deve mostrar botão com texto de aceitar", () => {
-    const { rematchBtn, status } = (() => {
+  it("waitingRematch deve mostrar botões de aceitar e recusar", () => {
+    const { rematchBtn, declineRematchBtn, status, cards } = (() => {
       createDomFixture()
       return {
         rematchBtn: globalThis.document.getElementById("rematchBtn"),
+        declineRematchBtn: globalThis.document.getElementById("declineRematchBtn"),
         status: globalThis.document.getElementById("status"),
+        cards: globalThis.document.getElementById("cards"),
       }
     })()
 
@@ -239,32 +245,66 @@ describe("client/app", () => {
 
     socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "A", 2: "B" } }) })
     socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
-    socket.onmessage({ data: JSON.stringify({ type: "waitingRematch" }) })
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
+    socket.onmessage({
+      data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 15_000, seconds: 15 }),
+    })
 
-    expect(status.innerText).toContain("quer jogar novamente")
+    expect(status.innerText).toBe("")
+    expect(cards.innerHTML).toContain("quer jogar novamente")
+    expect(cards.innerHTML).toContain("Aceite em")
     expect(rematchBtn.innerText).toContain("Aceitar")
+    expect(declineRematchBtn.innerText).toContain("Recusar")
     expect(rematchBtn.style.display).toBe("inline-block")
+    expect(declineRematchBtn.style.display).toBe("inline-block")
   })
 
-  it("rematch action deve enviar rematch e mostrar placeholder", () => {
-    const { cards, rematchBtn } = (() => {
+  it("rematch action deve enviar rematch e mostrar espera dentro do painel final", () => {
+    const { cards, rematchBtn, declineRematchBtn } = (() => {
       createDomFixture()
       return {
         cards: globalThis.document.getElementById("cards"),
         rematchBtn: globalThis.document.getElementById("rematchBtn"),
+        declineRematchBtn: globalThis.document.getElementById("declineRematchBtn"),
       }
     })()
 
     const socket = { send: vi.fn() }
     initApp({ socket })
 
-    // forçar visibilidade e clicar
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
     rematchBtn.style.display = "inline-block"
     rematchBtn.dispatchEvent("click")
 
     expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "rematch" }))
     expect(rematchBtn.style.display).toBe("none")
-    expect(cards.innerHTML).toContain("Aguardando o adversário aceitar a revanche")
+    expect(declineRematchBtn.style.display).toBe("inline-block")
+    expect(cards.innerHTML).toContain("gameover-panel")
+    expect(cards.innerHTML).toContain("Enviando pedido de revanche")
+  })
+
+  it("declineRematch deve enviar evento e esconder ações", () => {
+    const { cards, rematchBtn, declineRematchBtn } = (() => {
+      createDomFixture()
+      return {
+        cards: globalThis.document.getElementById("cards"),
+        rematchBtn: globalThis.document.getElementById("rematchBtn"),
+        declineRematchBtn: globalThis.document.getElementById("declineRematchBtn"),
+      }
+    })()
+
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
+    rematchBtn.style.display = "inline-block"
+    declineRematchBtn.style.display = "inline-block"
+    declineRematchBtn.dispatchEvent("click")
+
+    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "declineRematch" }))
+    expect(cards.innerHTML).toContain("Voltando ao lobby")
+    expect(rematchBtn.style.display).toBe("none")
+    expect(declineRematchBtn.style.display).toBe("none")
   })
 
   it("playerDisconnected deve resetar e tentar reentrar com o mesmo nome", () => {

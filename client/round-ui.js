@@ -63,25 +63,28 @@ export function stopResultCalcAnimation(
   }
 }
 
-export function startResultCalcAnimation(state, { playerNames, p1Card = null, p2Card = null } = {}) {
+export function startResultCalcAnimation(state, { p1Card = null, p2Card = null } = {}) {
   stopResultCalcAnimation(state)
 
   const cardsDiv = el("cards")
   if (!cardsDiv) return
 
-  const p1Name = playerNames?.[1] || "Jogador 1"
-  const p2Name = playerNames?.[2] || "Jogador 2"
-
   const card1 = p1Card && typeof p1Card === "object" ? p1Card : null
   const card2 = p2Card && typeof p2Card === "object" ? p2Card : null
+  const selfCard = state.playerId === 2 ? card2 : card1
+  const opponentCard = state.playerId === 2 ? card1 : card2
 
   state.resultCalcStartedAt = Date.now()
   cardsDiv.innerHTML = `
     <div class="round-stage">
       <div id="chosenCards" class="calc-duel">
-        ${card1 ? buildPreviewHandCardHtml(card1, p1Name) : ""}
+        <div class="calc-duel-side calc-duel-side--self">
+          ${selfCard ? buildPreviewHandCardHtml(selfCard) : ""}
+        </div>
         <div class="calc-vs">VS</div>
-        ${card2 ? buildPreviewHandCardHtml(card2, p2Name) : ""}
+        <div class="calc-duel-side calc-duel-side--opponent">
+          ${opponentCard ? buildPreviewHandCardHtml(opponentCard) : ""}
+        </div>
       </div>
       <div id="roundOutcome"></div>
       <div class="result-loading" aria-live="polite">
@@ -113,4 +116,3 @@ export function showResultAfterCalc(state, fn) {
 }
 
 export { setRoundOutcomeHtml }
-

@@ -59,7 +59,7 @@ describe("client/round-ui", () => {
     const status = createMockElement({ id: "status" })
     installMockDocument({ cards, status })
 
-    const state = { resultCalcStartedAt: null, pendingResultTimeout: null }
+    const state = { resultCalcStartedAt: null, pendingResultTimeout: null, playerId: 1 }
     startResultCalcAnimation(state, {
       playerNames: { 1: "A", 2: "B" },
       p1Card: { name: "X" },
@@ -67,6 +67,20 @@ describe("client/round-ui", () => {
     })
     expect(cards.innerHTML).toContain("Calculando resultado")
     expect(status.innerText).toContain("Aguarde")
+  })
+
+  it("startResultCalcAnimation deve mostrar a carta local na esquerda para o jogador 2", () => {
+    const cards = createMockElement({ id: "cards" })
+    const status = createMockElement({ id: "status" })
+    installMockDocument({ cards, status })
+
+    const state = { resultCalcStartedAt: null, pendingResultTimeout: null, playerId: 2 }
+    startResultCalcAnimation(state, {
+      p1Card: { name: "Python" },
+      p2Card: { name: "Go" },
+    })
+
+    expect(cards.innerHTML.indexOf("Go")).toBeLessThan(cards.innerHTML.indexOf("Python"))
   })
 
   it("stopResultCalcAnimation deve retornar quando #cards nÃ£o existe", () => {

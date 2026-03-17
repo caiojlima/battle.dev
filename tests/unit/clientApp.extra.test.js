@@ -16,6 +16,7 @@ function resetClientState() {
   state.resultCalcStartedAt = null
   state.pendingResultTimeout = null
   state.pickCountdownTimer = null
+  state.rematchCountdownTimer = null
   state.lastReveal = null
 }
 
@@ -35,6 +36,7 @@ function installBaseDom({ includePlayerCount = true, includePickTimerBanner = tr
   const confirmBtn = createMockElement({ id: "confirmBtn", tagName: "BUTTON" })
   const nextBtn = createMockElement({ id: "nextBtn", tagName: "BUTTON" })
   const rematchBtn = createMockElement({ id: "rematchBtn", tagName: "BUTTON" })
+  const declineRematchBtn = createMockElement({ id: "declineRematchBtn", tagName: "BUTTON" })
 
   const cards = createCardsContainer()
 
@@ -51,6 +53,7 @@ function installBaseDom({ includePlayerCount = true, includePickTimerBanner = tr
     confirmBtn,
     nextBtn,
     rematchBtn,
+    declineRematchBtn,
     cards,
   }
 
@@ -207,6 +210,8 @@ describe("client/app (extra coverage)", () => {
 
     expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "play", card: "A" }))
     expect(cards.innerHTML).toContain("sent-preview")
+    expect(cards.innerHTML).toContain("calc-duel-side--self")
+    expect(cards.innerHTML).not.toContain("Jogador:")
     expect(confirmBtn.style.display).toBe("none")
     expect(status.innerText).toBe("")
   })
@@ -599,6 +604,352 @@ describe("client/app (extra coverage)", () => {
 
     vi.advanceTimersByTime(2000)
     expect(result.textContent).not.toContain("Motivo:")
+  })
+
+  it("gameover deve esconder cartas e renderizar painel final centralizado", () => {
+    const { cards, score, question, rematchBtn, result, status } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice", 2: "Bob" } }) })
+    state.playerName = "Alice"
+
+    cards.innerHTML = `<div id="chosenCards">cartas antigas</div>`
+    result.innerHTML = "resultado antigo"
+    status.innerText = "Fim de jogo"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "gameover",
+        winner: 1,
+        score: { 1: 5, 2: 2 },
+        winnerCard: "Go",
+        loserCard: "Python",
+        scores: { 1: 88, 2: 65 },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+
+    expect(cards.innerHTML).toContain("gameover-panel")
+    expect(cards.innerHTML).not.toContain("chosenCards")
+    expect(cards.innerHTML).toContain("Alice")
+    expect(cards.innerHTML).toContain("Bob")
+    expect(cards.innerHTML).toContain("Fim de jogo")
+    expect(score.classList.contains("score-final")).toBe(true)
+    expect(question.classList.contains("is-gameover-question")).toBe(true)
+    expect(rematchBtn.style.display).toBe("inline-block")
+    expect(result.innerHTML).toBe("")
+    expect(status.innerText).toBe("")
+  })
+
+  it("gameover deve ser robusto quando #cards nao existir", () => {
+    const { score, question, rematchBtn, result, status } = installBaseDom()
+    delete globalThis.document.__elements
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice", 2: "Bob" } }) })
+    state.playerName = "Alice"
+    globalThis.document.getElementById = (id) =>
+      ({ score, question, rematchBtn, result, status }[id] || null)
+
+    expect(() =>
+      socket.onmessage({ data: JSON.stringify({ type: "gameover", winner: 1, score: { 1: 5, 2: 2 } }) })
+    ).not.toThrow()
+    expect(rematchBtn.style.display).toBe("inline-block")
+  })
+
+  it("gameover deve usar fallbacks de nome e pontuacao no painel final", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice" } }) })
+    state.playerName = "Alice"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "gameover",
+        winner: 1,
+        score: { 1: 5 },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(cards.innerHTML).toContain("Jogador 2")
+    expect(cards.innerHTML).toContain(">0<")
+  })
+
+  it("gameover deve usar zero quando a pontuacao do vencedor nao vier", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice", 2: "Bob" } }) })
+    state.playerName = "Alice"
+
+    socket.onmessage({
+      data: JSON.stringify({
+        type: "gameover",
+        winner: 2,
+        score: { 1: 3 },
+      }),
+    })
+
+    vi.advanceTimersByTime(2000)
+    expect(cards.innerHTML).toContain("Bob")
+    expect(cards.innerHTML).toContain(">0<")
+  })
+
+  it("waitingRematch deve atualizar estado de revanche ja renderizado no painel final", () => {
+    const { cards, rematchBtn, declineRematchBtn } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice", 2: "Bob" } }) })
+    state.playerName = "Alice"
+
+    cards.innerHTML = `<section class="gameover-panel"><div class="gameover-rematch-state"><span>antigo</span></div></section>`
+    rematchBtn.style.display = "inline-block"
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 15_000, seconds: 15 }),
+    })
+
+    expect(cards.innerHTML).toContain("Bob quer jogar novamente")
+    expect(cards.innerHTML).not.toContain("antigo")
+    expect(cards.innerHTML).toContain("is-urgent")
+    expect(rematchBtn.innerText).toContain("Aceitar")
+    expect(declineRematchBtn.innerText).toContain("Recusar")
+  })
+
+  it("waitingRematch deve atualizar apenas o slot interno quando ele existir", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    const rematchSlot = { innerHTML: "" }
+    cards.querySelector = (selector) => (selector === ".gameover-rematch-slot" ? rematchSlot : null)
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 15_000, seconds: 15 }),
+    })
+
+    expect(rematchSlot.innerHTML).toContain("gameover-rematch-state")
+    expect(rematchSlot.innerHTML).toContain("quer jogar novamente")
+  })
+
+  it("waitingRematch deve atualizar refs existentes sem recriar o bloco", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    const stateEl = { classList: { toggle: vi.fn() } }
+    const spinnerEl = { style: {} }
+    const ringEl = { style: { display: "", setProperty: vi.fn() } }
+    const secondsEl = { textContent: "" }
+    const messageEl = { textContent: "" }
+    const detailEl = { textContent: "" }
+
+    const rematchSlot = {
+      __rematchStateRefs: { stateEl, spinnerEl, ringEl, secondsEl, messageEl, detailEl },
+    }
+
+    cards.querySelector = (selector) => (selector === ".gameover-rematch-slot" ? rematchSlot : null)
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 15_000, seconds: 15 }),
+    })
+
+    expect(stateEl.classList.toggle).toHaveBeenCalledWith("is-urgent", true)
+    expect(spinnerEl.style.display).toBe("none")
+    expect(ringEl.style.display).toBe("inline-block")
+    expect(ringEl.style.setProperty).toHaveBeenCalled()
+    expect(secondsEl.textContent).not.toBe("")
+    expect(messageEl.textContent).toContain("quer jogar novamente")
+    expect(detailEl.textContent).toContain("Aceite em")
+  })
+
+  it("rematchPending deve atualizar refs existentes sem countdown", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    const stateEl = { classList: { toggle: vi.fn() } }
+    const spinnerEl = { style: {} }
+    const ringEl = { style: { display: "", setProperty: vi.fn() } }
+    const secondsEl = { textContent: "10" }
+    const messageEl = { textContent: "" }
+    const detailEl = { textContent: "" }
+
+    const rematchSlot = {
+      __rematchStateRefs: { stateEl, spinnerEl, ringEl, secondsEl, messageEl, detailEl },
+    }
+
+    cards.querySelector = (selector) => (selector === ".gameover-rematch-slot" ? rematchSlot : null)
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "rematchPending" }),
+    })
+
+    expect(stateEl.classList.toggle).toHaveBeenCalledWith("is-urgent", false)
+    expect(spinnerEl.style.display).toBe("inline-block")
+    expect(ringEl.style.display).toBe("none")
+    expect(ringEl.style.setProperty).not.toHaveBeenCalled()
+    expect(secondsEl.textContent).toBe("")
+    expect(messageEl.textContent).toContain("Aguardando o adversário")
+  })
+
+  it("waitingRematch deve tolerar refs parciais no slot", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    const stateEl = { classList: { toggle: vi.fn() } }
+    const rematchSlot = {
+      __rematchStateRefs: { stateEl },
+    }
+
+    cards.querySelector = (selector) => (selector === ".gameover-rematch-slot" ? rematchSlot : null)
+
+    expect(() =>
+      socket.onmessage({
+        data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 15_000, seconds: 15 }),
+      })
+    ).not.toThrow()
+
+    expect(stateEl.classList.toggle).toHaveBeenCalledWith("is-urgent", true)
+  })
+
+  it("waitingRematch deve criar placeholder urgente quando painel final nao existir", () => {
+    const { cards, rematchBtn, declineRematchBtn, status } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 1 }) })
+    socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 1: "Alice", 2: "Bob" } }) })
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 15_000, seconds: 15 }),
+    })
+
+    expect(cards.innerHTML).toContain("round-placeholder")
+    expect(cards.innerHTML).toContain("gameover-rematch-state is-urgent")
+    expect(cards.innerHTML).toContain("Bob quer jogar novamente")
+    expect(rematchBtn.innerText).toContain("Aceitar")
+    expect(declineRematchBtn.innerText).toContain("Recusar")
+    expect(status.innerText).toBe("")
+  })
+
+  it("rematch deve criar placeholder neutro quando painel final nao existir", () => {
+    const { cards, rematchBtn, declineRematchBtn } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    rematchBtn.style.display = "inline-block"
+    rematchBtn.dispatchEvent("click")
+
+    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "rematch" }))
+    expect(cards.innerHTML).toContain("round-placeholder")
+    expect(cards.innerHTML).toContain("gameover-rematch-state")
+    expect(cards.innerHTML).not.toContain("is-urgent")
+    expect(declineRematchBtn.style.display).toBe("inline-block")
+  })
+
+  it("rematchPending deve mostrar countdown de expiração no painel final", () => {
+    const { cards, declineRematchBtn, rematchBtn } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
+    socket.onmessage({
+      data: JSON.stringify({ type: "rematchPending", endsAt: Date.now() + 15_000, seconds: 15 }),
+    })
+
+    expect(cards.innerHTML).toContain("Aguardando o adversário aceitar a revanche")
+    expect(cards.innerHTML).toContain("expira em")
+    expect(rematchBtn.style.display).toBe("none")
+    expect(declineRematchBtn.style.display).toBe("inline-block")
+  })
+
+  it("lobbyReturned deve resetar interface e reabrir login", () => {
+    const { cards, loginScreen, waitingScreen, status } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    state.playerName = "Alice"
+    state.playerId = 1
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "lobbyReturned", reason: "rematchTimeout" }),
+    })
+
+    expect(cards.innerHTML).toBe("")
+    expect(loginScreen.style.display).toBe("flex")
+    expect(waitingScreen.style.display).toBe("none")
+    expect(status.innerText).toContain("Tempo de resposta")
+  })
+
+  it("lobbyReturned deve diferenciar recusa própria", () => {
+    const { status } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    state.playerName = "Alice"
+    state.playerId = 2
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "lobbyReturned", reason: "rematchDeclined", declinedBy: 2 }),
+    })
+
+    expect(status.innerText).toContain("Você recusou")
+  })
+
+  it("lobbyReturned deve diferenciar recusa do adversário", () => {
+    const { status } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    state.playerName = "Alice"
+    state.playerId = 1
+
+    socket.onmessage({
+      data: JSON.stringify({ type: "lobbyReturned", reason: "rematchDeclined", declinedBy: 2 }),
+    })
+
+    expect(status.innerText).toContain("foi recusada")
+  })
+
+  it("lobbyReturned deve usar mensagem padrão quando o motivo não vier", () => {
+    const { status } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    state.playerName = "Alice"
+    socket.onmessage({ data: JSON.stringify({ type: "lobbyReturned" }) })
+
+    expect(status.innerText).toContain("voltou ao lobby")
+  })
+
+  it("waitingRematch deve encerrar countdown ao expirar", () => {
+    const { cards } = installBaseDom()
+    const socket = { send: vi.fn() }
+    initApp({ socket })
+
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
+    socket.onmessage({
+      data: JSON.stringify({ type: "waitingRematch", endsAt: Date.now() + 50, seconds: 1 }),
+    })
+
+    vi.advanceTimersByTime(100)
+    expect(state.rematchCountdownTimer).toBeNull()
   })
 
   it("tipo de mensagem desconhecido deve logar warn", () => {

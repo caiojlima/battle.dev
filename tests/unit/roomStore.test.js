@@ -42,13 +42,17 @@ describe("server/room-store", () => {
   it("resetMatchData deve limpar timeout e resetar estado", () => {
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
     const fakeId = setTimeout(() => {}, 10_000)
+    const rematchId = setTimeout(() => {}, 10_000)
 
     const room = {
+      rematchDecisionTimeout: rematchId,
       opponentPickTimeout: fakeId,
       hands: { 1: [1], 2: [2] },
       plays: { 1: "A" },
       score: { 1: 9, 2: 9 },
       rematchVotes: 2,
+      rematchRequestedBy: 1,
+      rematchRequestEndsAt: Date.now() + 15_000,
       currentQuestion: "Q",
       usedQuestions: new Set(["Q"]),
       roundResolutionStarted: true,
@@ -56,14 +60,16 @@ describe("server/room-store", () => {
 
     resetMatchData(room)
     expect(clearTimeoutSpy).toHaveBeenCalled()
+    expect(room.rematchDecisionTimeout).toBeNull()
     expect(room.opponentPickTimeout).toBeNull()
     expect(room.hands[1]).toEqual([])
     expect(room.plays).toEqual({})
     expect(room.score).toEqual({ 1: 0, 2: 0 })
     expect(room.rematchVotes).toBe(0)
+    expect(room.rematchRequestedBy).toBeNull()
+    expect(room.rematchRequestEndsAt).toBeNull()
     expect(room.currentQuestion).toBeNull()
     expect(room.usedQuestions instanceof Set).toBe(true)
     expect(room.roundResolutionStarted).toBe(false)
   })
 })
-

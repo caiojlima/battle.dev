@@ -16,6 +16,7 @@ function resetClientState() {
   state.resultCalcStartedAt = null
   state.pendingResultTimeout = null
   state.pickCountdownTimer = null
+  state.rematchCountdownTimer = null
   state.lastReveal = null
 }
 
@@ -56,6 +57,7 @@ function installDom({
   if (includeCards) elements.cards = createCardsContainer()
   if (includePlayerCount) elements.playerCount = createMockElement({ id: "playerCount" })
   if (includeRematchBtn) elements.rematchBtn = createMockElement({ id: "rematchBtn", tagName: "BUTTON" })
+  elements.declineRematchBtn = createMockElement({ id: "declineRematchBtn", tagName: "BUTTON" })
   if (includePickTimerBanner) {
     const pickTimerBanner = createMockElement({ id: "pickTimerBanner" })
     pickTimerBanner.style.display = "none"
@@ -80,15 +82,17 @@ describe("client/app (branches)", () => {
   })
 
   it("waitingRematch deve usar fallback de nome do oponente quando ausente", () => {
-    const { status } = installDom()
+    const { status, cards } = installDom()
     const socket = createSocket()
     initApp({ socket })
 
     socket.onmessage({ data: JSON.stringify({ type: "init", playerId: 2 }) })
     socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 2: "B" } }) })
+    cards.innerHTML = `<section class="gameover-panel"><div>final</div></section>`
     socket.onmessage({ data: JSON.stringify({ type: "waitingRematch" }) })
 
-    expect(status.innerText).toContain("Jogador 1")
+    expect(status.innerText).toBe("")
+    expect(cards.innerHTML).toContain("Jogador 1")
   })
 
   it("stopPickCountdown deve ser no-op quando banner nÃ£o existe", () => {
@@ -321,7 +325,7 @@ describe("client/app (branches)", () => {
   })
 
   it("handleGameOver deve suportar derrota (branch cond-expr)", () => {
-    const { result } = installDom()
+    const { cards, score, question } = installDom()
     const socket = createSocket()
     initApp({ socket })
 
@@ -329,7 +333,11 @@ describe("client/app (branches)", () => {
     socket.onmessage({ data: JSON.stringify({ type: "joined", playerNames: { 2: "Bob" } }) })
 
     socket.onmessage({ data: JSON.stringify({ type: "gameover", winner: 2, score: { 1: 0, 2: 5 } }) })
-    expect(result.textContent).toContain("venceu")
+    expect(cards.innerHTML).toContain("gameover-panel")
+    expect(cards.innerHTML).toContain("Bob")
+    expect(cards.innerHTML).toContain("venceu a partida")
+    expect(score.classList.contains("score-final")).toBe(true)
+    expect(question.classList.contains("is-gameover-question")).toBe(true)
   })
 
   it("waitingRematch deve ser no-op quando rematchBtn nÃ£o existe (branch if(btn))", () => {

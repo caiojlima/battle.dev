@@ -21,6 +21,9 @@ export const state = {
   // Countdown do timer de escolha (servidor)
   pickCountdownTimer: null,
 
+  // Countdown da janela para aceitar/rejeitar revanche.
+  rematchCountdownTimer: null,
+
   // Último reveal recebido (para explicar o resultado).
   lastReveal: null,
 }

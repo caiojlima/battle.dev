@@ -141,6 +141,219 @@ margin-top:20px;
   opacity:.9;
 }
 
+#question.is-gameover-question{
+opacity:.65;
+font-size:1.5rem;
+margin-bottom:8px;
+}
+
+.gameover-panel{
+width:min(100%, 620px);
+margin:10px auto 0;
+padding:28px 26px 30px;
+border-radius:24px;
+background:
+linear-gradient(180deg, rgba(0,198,255,.08), rgba(46,204,113,.06)),
+rgba(255,255,255,0.03);
+border:1px solid rgba(255,255,255,.08);
+box-shadow:
+0 18px 48px rgba(0,0,0,.35),
+0 0 0 1px rgba(0,198,255,.06) inset;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:14px;
+animation: gameoverReveal .45s ease-out forwards;
+}
+
+.gameover-eyebrow{
+font-size:.82rem;
+letter-spacing:2.5px;
+text-transform:uppercase;
+color:#8fdfff;
+opacity:.9;
+}
+
+.gameover-trophy{
+width:74px;
+height:74px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:2rem;
+background:radial-gradient(circle, rgba(46,204,113,.3), rgba(46,204,113,.08));
+box-shadow:0 0 30px rgba(46,204,113,.18);
+}
+
+.gameover-title{
+margin:0;
+font-size:clamp(2rem, 4vw, 3rem);
+letter-spacing:1px;
+color:#fff;
+text-shadow:0 0 24px rgba(0,198,255,.18);
+}
+
+.gameover-subtitle{
+margin:0;
+color:#b8c4d0;
+font-size:1rem;
+}
+
+.gameover-scoreline{
+width:100%;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:14px;
+margin-top:6px;
+flex-wrap:wrap;
+}
+
+.gameover-score{
+min-width:170px;
+padding:14px 18px;
+border-radius:16px;
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(255,255,255,0.06);
+display:flex;
+flex-direction:column;
+gap:6px;
+}
+
+.gameover-score.is-winner{
+background:linear-gradient(180deg, rgba(52,152,219,.14), rgba(46,204,113,.14));
+border-color:rgba(46,204,113,.24);
+box-shadow:0 0 24px rgba(46,204,113,.14);
+}
+
+.gameover-score-name{
+font-size:.82rem;
+letter-spacing:.5px;
+color:#b9c2cb;
+}
+
+.gameover-score-value{
+font-size:2.2rem;
+line-height:1;
+color:#fff;
+}
+
+.gameover-score.is-winner .gameover-score-value{
+color:#62d98e;
+}
+
+.gameover-score-separator{
+font-weight:800;
+letter-spacing:2px;
+color:#45515d;
+}
+
+.gameover-rematch-state{
+width:min(100%, 420px);
+margin-top:4px;
+padding:14px 16px;
+border-radius:16px;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+background:linear-gradient(180deg, rgba(13,24,35,.92), rgba(12,18,27,.82));
+border:1px solid rgba(143,223,255,.18);
+color:#cfeeff;
+box-shadow:0 10px 28px rgba(0,0,0,.18);
+animation: rematchFadeIn .28s ease-out forwards;
+}
+
+.gameover-rematch-copy{
+display:flex;
+flex-direction:column;
+align-items:flex-start;
+gap:4px;
+text-align:left;
+}
+
+.gameover-rematch-copy strong{
+font-size:.98rem;
+font-weight:700;
+color:inherit;
+}
+
+.gameover-rematch-copy small{
+font-size:.8rem;
+line-height:1.35;
+color:rgba(230,244,255,.74);
+}
+
+.gameover-rematch-copy small:empty{
+display:none;
+}
+
+.gameover-rematch-state .spinner{
+border-color:rgba(143,223,255,.18);
+border-top-color:#8fdfff;
+}
+
+.rematch-timer-ring{
+box-shadow:0 0 0 1px rgba(143,223,255,.12);
+}
+
+.gameover-rematch-state.is-urgent{
+border-color:rgba(46,204,113,.3);
+background:linear-gradient(180deg, rgba(12,31,24,.95), rgba(13,24,20,.82));
+color:#dbffe8;
+box-shadow:0 12px 34px rgba(46,204,113,.12);
+}
+
+.gameover-rematch-state.is-urgent .spinner{
+border-top-color:#62d98e;
+}
+
+.gameover-rematch-state.is-urgent .rematch-timer-ring{
+background:conic-gradient(#62d98e calc(var(--p) * 1turn), rgba(255,255,255,.16) 0);
+box-shadow:0 0 0 1px rgba(98,217,142,.16);
+}
+
+#actionButtons{
+display:flex;
+justify-content:center;
+align-items:center;
+gap:12px;
+flex-wrap:wrap;
+margin-top:20px;
+}
+
+.score-final{
+max-width:360px !important;
+margin:0 auto 12px auto !important;
+gap:8px !important;
+}
+
+.score-final .score-side{
+padding:8px 12px;
+border-radius:12px;
+}
+
+.score-final .score-name{
+font-size:.78rem;
+max-width:110px;
+}
+
+.score-final .score-points{
+font-size:1.5rem;
+}
+
+.score-final .score-vs{
+padding:0 6px;
+margin-bottom:0;
+font-size:.85rem;
+}
+
+.score-final .score-check{
+display:none;
+}
+
 button{
 
 padding:10px 20px;
@@ -158,8 +371,6 @@ margin:10px;
 
 #rematchBtn{
 display:none;
-
-margin-top:20px;
 
 padding:13px 44px;
 
@@ -184,6 +395,27 @@ box-shadow:0 6px 20px rgba(46,204,113,.35);
 #rematchBtn:hover{
 transform:translateY(-2px);
 box-shadow:0 10px 28px rgba(46,204,113,.5);
+}
+
+#declineRematchBtn{
+display:none;
+padding:13px 28px;
+font-size:15px;
+font-weight:600;
+letter-spacing:.5px;
+background:linear-gradient(135deg, rgba(22,28,36,.95), rgba(28,36,46,.95));
+color:#d9e4ef;
+border:1px solid rgba(143,223,255,.16);
+border-radius:10px;
+cursor:pointer;
+transition:.2s;
+box-shadow:0 6px 20px rgba(0,0,0,.22);
+}
+
+#declineRematchBtn:hover{
+transform:translateY(-2px);
+border-color:rgba(143,223,255,.3);
+box-shadow:0 10px 24px rgba(0,0,0,.26);
 }
 
 #confirmBtn{
@@ -517,8 +749,8 @@ gap:12px;
 }
 
 .sent-preview{
-display:flex;
-justify-content:center;
+width:100%;
+max-width:480px;
 margin:12px auto 0 auto;
 }
 
@@ -535,13 +767,24 @@ transform:none;
 }
 
 .calc-duel{
-display:flex;
-align-items:stretch;
-justify-content:center;
-gap:10px;
+display:grid;
+grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+align-items:start;
+justify-items:center;
+column-gap:10px;
 margin:10px auto 0 auto;
-max-width:520px;
-flex-wrap:wrap;
+width:100%;
+max-width:480px;
+}
+
+.calc-duel-side{
+width:100%;
+display:flex;
+justify-content:center;
+}
+
+.calc-duel--single .calc-duel-side--opponent{
+visibility:hidden;
 }
 
 .calc-duel .card{
@@ -568,6 +811,10 @@ letter-spacing:2px;
 color:#333;
 }
 
+.calc-vs--ghost{
+visibility:hidden;
+}
+
 .spinner{
 width:18px;
 height:18px;
@@ -579,6 +826,28 @@ animation: spin .8s linear infinite;
 
 @keyframes spin{
 to { transform: rotate(360deg); }
+}
+
+@keyframes gameoverReveal{
+from{
+opacity:0;
+transform:translateY(18px) scale(.97);
+}
+to{
+opacity:1;
+transform:translateY(0) scale(1);
+}
+}
+
+@keyframes rematchFadeIn{
+from{
+opacity:0;
+transform:translateY(8px);
+}
+to{
+opacity:1;
+transform:translateY(0);
+}
 }
 
 .card-info{
@@ -599,6 +868,23 @@ word-wrap:break-word;
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px){
+  .gameover-panel{
+    padding:22px 16px 24px;
+    gap:12px;
+  }
+
+  .gameover-scoreline{
+    gap:10px;
+  }
+
+  .gameover-score{
+    min-width:140px;
+    width:100%;
+    max-width:220px;
   }
 }
 </style>
@@ -665,8 +951,13 @@ Próxima rodada
 Jogar novamente
 </button>
 
+<button id="declineRematchBtn" style="display:none;">
+Voltar ao lobby
+</button>
+
 <script type="module" src="client.js"></script>
 
 
 </body>
 </html>
+

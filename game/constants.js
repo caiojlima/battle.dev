@@ -7,7 +7,7 @@
 // =============================================================================
 // CONSTANTES DO JOGO
 // =============================================================================
-export const WIN_SCORE = 5 // Pontos necessários para vencer
+export const WIN_SCORE = 2 // Pontos necessários para vencer
 export const CARDS_PER_PLAYER = 6 // Quantas cartas cada jogador recebe por partida
 export const OPPONENT_PICK_TIMEOUT_MS = 10_000
 
