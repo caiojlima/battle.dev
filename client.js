@@ -163,8 +163,6 @@ socket.onmessage = (event) => {
     waiting:            () => handleWaiting(data),
     reveal:             () => handleReveal(data),
     result:             () => handleResult(data),
-    voteRegistered:     () => handleVoteRegistered(),
-    waitingVote:        () => handleWaitingVote(data),
     draw:               () => handleDraw(),
     gameover:           () => handleGameOver(data),
     waitingRematch:     () => handleWaitingRematch(),
@@ -293,29 +291,23 @@ function handleReveal(data) {
   // Integra o resultado das cartas diretamente no painel de votação,
   // eliminando o #result separado e tornando cada carta clicável como voto.
   el("result").innerHTML = ""
-  el("status").innerText = "Quem escolheu melhor?"
-
-  selectedVote  = null
-  voteConfirmed = false
+  el("status").innerText = "Cartas reveladas! Calculando vencedor..."
 
   el("vote").innerHTML = `
-    <p class="vote-title">Vote no vencedor</p>
+    <p class="vote-title">Duelo da rodada</p>
     <div class="vote-cards">
-      <div class="vote-card" id="voteCard1" onclick="vote(1)">
+      <div class="vote-card" id="voteCard1">
         <span class="vote-player-name">${p1Name}</span>
         <i class="vote-lang-icon devicon-${toDeviconSlug(data.player1)}-plain"></i>
         <span class="vote-lang-name">${data.player1}</span>
       </div>
       <div class="vote-vs-divider">VS</div>
-      <div class="vote-card" id="voteCard2" onclick="vote(2)">
+      <div class="vote-card" id="voteCard2">
         <span class="vote-player-name">${p2Name}</span>
         <i class="vote-lang-icon devicon-${toDeviconSlug(data.player2)}-plain"></i>
         <span class="vote-lang-name">${data.player2}</span>
       </div>
     </div>
-    <button id="confirmVoteBtn" onclick="confirmVote()">
-      Confirmar voto
-    </button>
   `
   show("vote", "block")
 }
@@ -331,6 +323,16 @@ function handleResult(data) {
   el("nextBtn").innerText = "Próxima Rodada... 3s"
   show("nextBtn")
   startAutoNextRoundTimer()
+
+  const winnerName = data.winner == playerId ? playerName : getOpponentName()
+  if (data.winner && data.winnerCard) {
+    el("result").innerHTML = `Rodada: <strong>${winnerName}</strong> venceu com <strong>${data.winnerCard}</strong>`
+  } else if (data.winner) {
+    el("result").innerHTML = `Rodada: <strong>${winnerName}</strong> venceu!`
+  }
+
+  el("status").innerText = "PrÃ³xima rodada..."
+  show("vote", "block")
 }
 
 /**
@@ -359,6 +361,10 @@ function handleDraw() {
   el("nextBtn").innerText = "Próxima Rodada... 3s"
   show("nextBtn")
   startAutoNextRoundTimer()
+
+  el("result").innerHTML = "Rodada empatada!"
+  el("status").innerText = "PrÃ³xima rodada..."
+  show("vote", "block")
 }
 
 /**
@@ -705,7 +711,7 @@ function updateScoreIndicators(playedBy = [], votedBy = []) {
  * Atualiza o texto do botão a cada segundo para dar feedback visual ao jogador.
  */
 function startAutoNextRoundTimer() {
-  let countdown = 3
+  let countdown = 10
   const btn = el("nextBtn")
 
   autoNextRoundTimer = setInterval(() => {

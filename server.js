@@ -343,6 +343,86 @@ const QUESTIONS = [
   "Qual linguagem domina mais o GitHub?",
 ]
 
+const QUESTION_WEIGHTS = {
+  // Mercado e carreira
+  "Qual linguagem tem mais vagas no mercado?": { mercado: 1 },
+  "Qual linguagem paga melhor atualmente?": { mercado: 0.7, complexidade: 0.3 },
+  "Qual linguagem é melhor para conseguir o primeiro emprego?": { facilidade: 0.7, mercado: 0.3 },
+  "Qual linguagem é mais valorizada em grandes empresas?": { mercado: 0.6, performance: 0.4 },
+  "Qual linguagem é mais usada em startups?": { popularidade: 0.6, facilidade: 0.4 },
+  "Qual linguagem tem maior crescimento nos últimos anos?": { popularidade: 0.7, mercado: 0.3 },
+  "Qual linguagem tem mais oportunidades remotas?": { mercado: 0.7, popularidade: 0.3 },
+  "Qual linguagem tem mais demanda internacional?": { mercado: 0.8, popularidade: 0.2 },
+
+  // Experiência
+  "Qual linguagem é mais divertida de programar?": { facilidade: 0.6, complexidade: -0.4 },
+  "Qual linguagem tem a melhor sintaxe?": { facilidade: 0.7, complexidade: -0.3 },
+  "Qual linguagem é mais elegante?": { complexidade: 0.5, performance: 0.5 },
+  "Qual linguagem é mais produtiva para desenvolvedores?": { facilidade: 0.6, performance: 0.4 },
+  "Qual linguagem tem menos código boilerplate?": { facilidade: 0.7, complexidade: -0.3 },
+  "Qual linguagem é mais agradável de manter?": { facilidade: 0.6, complexidade: -0.4 },
+  "Qual linguagem é mais fácil de debugar?": { facilidade: 0.6, complexidade: -0.4 },
+  "Qual linguagem tem as melhores ferramentas?": { popularidade: 0.7, mercado: 0.3 },
+
+  // Aprendizado
+  "Qual linguagem é mais fácil para iniciantes?": { facilidade: 1 },
+  "Qual linguagem é mais difícil de dominar?": { complexidade: 1 },
+  "Qual linguagem tem melhor documentação?": { popularidade: 1 },
+  "Qual linguagem é melhor para aprender programação?": { facilidade: 0.7, complexidade: -0.3 },
+  "Qual linguagem ensina melhor lógica de programação?": { complexidade: 0.6, performance: 0.4 },
+  "Qual linguagem tem mais material de estudo?": { popularidade: 1 },
+  "Qual linguagem é mais intuitiva?": { facilidade: 0.8, complexidade: -0.2 },
+
+  // Ecossistema
+  "Qual linguagem tem melhor comunidade?": { popularidade: 1 },
+  "Qual linguagem tem mais bibliotecas disponíveis?": { popularidade: 0.8, mercado: 0.2 },
+  "Qual linguagem tem o melhor ecossistema?": { popularidade: 0.7, mercado: 0.3 },
+  "Qual linguagem tem os melhores frameworks?": { popularidade: 0.6, performance: 0.4 },
+  "Qual linguagem evolui mais rápido?": { popularidade: 0.6, mercado: 0.4 },
+  "Qual linguagem tem as melhores ferramentas open source?": { popularidade: 1 },
+
+  // Aplicações
+  "Qual linguagem é melhor para backend?": { performance: 0.5, mercado: 0.3, complexidade: 0.2 },
+  "Qual linguagem é melhor para sistemas web?": { popularidade: 0.6, mercado: 0.4 },
+  "Qual linguagem é melhor para APIs?": { performance: 0.6, mercado: 0.4 },
+  "Qual linguagem é melhor para automação?": { facilidade: 0.7, popularidade: 0.3 },
+  "Qual linguagem é melhor para microserviços?": { performance: 0.6, complexidade: 0.4 },
+  "Qual linguagem é melhor para cloud?": { mercado: 0.5, performance: 0.5 },
+
+  // Polêmicas
+  "Qual linguagem deveria desaparecer?": { popularidade: -0.6, mercado: -0.4 },
+  "Qual linguagem é mais superestimada?": { popularidade: 0.7, performance: -0.3 },
+  "Qual linguagem tem a pior sintaxe?": { facilidade: -0.7, complexidade: 0.3 },
+  "Qual linguagem tem mais código feio na internet?": { popularidade: 0.6, facilidade: -0.4 },
+  "Qual linguagem cria os piores projetos?": { facilidade: -0.5, complexidade: 0.5 },
+  "Qual linguagem tem os desenvolvedores mais fanáticos?": { popularidade: 1 },
+  "Qual linguagem tem a comunidade mais tóxica?": { popularidade: 1 },
+  "Qual linguagem gera mais bugs em produção?": { complexidade: 0.6, performance: -0.4 },
+  "Qual linguagem tem os desenvolvedores mais arrogantes?": { popularidade: 1 },
+  "Qual linguagem tem mais dev que se acha senior?": { popularidade: 1 },
+  "Qual linguagem tem mais dev que só copia do StackOverflow?": { popularidade: 0.7, facilidade: 0.3 },
+  "Qual linguagem tem mais cursos vendendo promessa falsa?": { popularidade: 1 },
+  "Qual linguagem tem mais hype do que resultado?": { popularidade: 0.7, performance: -0.3 },
+  "Qual linguagem é mais usada por devs preguiçosos?": { facilidade: 0.8, complexidade: -0.2 },
+  "Qual linguagem gera os sistemas mais difíceis de manter?": { complexidade: 0.7, facilidade: -0.3 },
+  "Qual linguagem gera os projetos mais bagunçados?": { complexidade: 0.7, facilidade: -0.3 },
+  "Qual linguagem vira mais 'spaghetti code'?": { complexidade: 0.8, facilidade: -0.2 },
+  "Qual linguagem mais sofre com dependências quebradas?": { popularidade: 0.5, complexidade: 0.5 },
+  "Qual linguagem tem os piores frameworks?": { popularidade: -0.5, performance: -0.5 },
+
+  // Curiosidades
+  "Qual linguagem tem os memes mais fortes?": { popularidade: 1 },
+  "Qual linguagem tem os devs mais nerds?": { complexidade: 0.6, performance: 0.4 },
+  "Qual linguagem mais aparece em tutorial no YouTube?": { popularidade: 1 },
+  "Qual linguagem tem os devs mais puristas?": { complexidade: 0.7, performance: 0.3 },
+  "Qual linguagem tem os devs mais religiosos?": { popularidade: 1 },
+  "Qual linguagem é mais 'gambiarra'?": { facilidade: 0.7, performance: -0.3 },
+  "Qual linguagem parece mágica demais?": { facilidade: 0.7, complexidade: -0.3 },
+  "Qual linguagem é mais difícil de refatorar?": { complexidade: 0.7, facilidade: -0.3 },
+  "Qual linguagem mais esconde bugs?": { complexidade: 0.6, performance: -0.4 },
+  "Qual linguagem mais quebra em produção?": { performance: -0.7, complexidade: 0.3 }
+}
+
 // =============================================================================
 // ESTADO GLOBAL DA PARTIDA
 // Uma única partida acontece por vez neste servidor.
@@ -363,10 +443,12 @@ function createEmptyGameState() {
   return {
     players:      {},
     playerNames:  {},
+    hands:        { 1: [], 2: [] },
     plays:        {},
     votes:        {},
     score:        { 1: 0, 2: 0 },
     rematchVotes: 0,
+    currentQuestion: null,
   }
 }
 
@@ -375,10 +457,12 @@ function createEmptyGameState() {
  * Usado quando um jogador desconecta (mantemos o socket do outro) e no rematch.
  */
 function resetMatchData() {
+  gameState.hands        = { 1: [], 2: [] }
   gameState.plays        = {}
   gameState.votes        = {}
   gameState.score        = { 1: 0, 2: 0 }
   gameState.rematchVotes = 0
+  gameState.currentQuestion = null
 }
 
 // =============================================================================
@@ -389,6 +473,72 @@ function resetMatchData() {
  * Embaralha um array sem modificar o original (retorna nova cópia).
  * Usado para sortear cartas e perguntas.
  */
+
+function inferWeightsFromQuestion(question) {
+  if (!question) return null
+
+  const q = String(question).toLowerCase()
+
+  // Perguntas "negativas" (queremos o "pior"): inverter sinais para que o maior score
+  // corresponda ao menor desempenho nos atributos relevantes.
+  const isNegative =
+    /\b(pior|desaparecer|superestimad|c[oó]digo feio|t[oó]xica|bugs|arrogant|bagun[cç]ad|spaghetti|depend[eê]ncias quebradas|questionar a vida)\b/.test(q)
+
+  const weights = {}
+
+  if (/(performance|alta performance|r[aá]pid|escala|cloud|microservi[cç]os|cr[ií]tic)/.test(q)) {
+    weights.performance = 1
+  }
+  if (/(f[aá]cil|iniciante|sintaxe|produtiv|boilerplate|debug|autocomplete|dor de cabe[cç]a|intuitiv)/.test(q)) {
+    weights.facilidade = 1
+  }
+  if (/(mercado|vaga|emprego|carreira|remot|oportunidad|exterior|brasil|entrevist|demanda|internacional)/.test(q)) {
+    weights.mercado = 1
+  }
+  if (/(comunidade|biblioteca|ecossistema|framework|github|youtube|meme|material de estudo|documenta[cç][aã]o|tutorial)/.test(q)) {
+    weights.popularidade = 1
+  }
+  if (/(dif[ií]cil|complex|refator|manter|ileg[ií]vel|legado)/.test(q)) {
+    weights.complexidade = 1
+  }
+
+  // Se nada casou, usa uma mÃ©dia "geral" para nÃ£o cair em random.
+  if (Object.keys(weights).length === 0) {
+    weights.performance   = 1
+    weights.facilidade    = 1
+    weights.mercado       = 1
+    weights.complexidade  = 1
+    weights.popularidade  = 1
+  }
+
+  if (isNegative) {
+    Object.keys(weights).forEach((k) => {
+      weights[k] = -weights[k]
+    })
+  }
+
+  return weights
+}
+
+function getQuestionWeights(question) {
+  return QUESTION_WEIGHTS[question] || inferWeightsFromQuestion(question)
+}
+
+function getWeightedScore(card, question) {
+  const weights = getQuestionWeights(question)
+  if (!weights) return 0
+
+  return Object.entries(weights).reduce((total, [stat, weight]) => {
+    return total + (card.stats?.[stat] || 0) * weight
+  }, 0)
+}
+
+function getBestCard(cards, question) {
+  return cards.reduce((best, current) => {
+    return getWeightedScore(current, question) > getWeightedScore(best, question) ? current : best
+  })
+}
+
 function shuffle(array) {
   return [...array].sort(() => Math.random() - 0.5)
 }
@@ -449,14 +599,19 @@ function startMatch() {
 function dealCards() {
   const shuffled = shuffle(LANGUAGES)
 
+  const hand1 = shuffled.slice(0, CARDS_PER_PLAYER)
+  const hand2 = shuffled.slice(CARDS_PER_PLAYER, CARDS_PER_PLAYER * 2)
+
+  gameState.hands = { 1: hand1, 2: hand2 }
+
   gameState.players[1].send(JSON.stringify({
     type: "newCards",
-    languages: shuffled.slice(0, CARDS_PER_PLAYER),
+    languages: hand1,
   }))
 
   gameState.players[2].send(JSON.stringify({
     type: "newCards",
-    languages: shuffled.slice(CARDS_PER_PLAYER, CARDS_PER_PLAYER * 2),
+    languages: hand2,
   }))
 }
 
@@ -469,9 +624,12 @@ function startRound() {
 
   dealCards()
 
+  const question = randomQuestion()
+  gameState.currentQuestion = question
+
   broadcast({
     type:        "question",
-    question:    randomQuestion(),
+    question,
     score:       gameState.score,
     playerNames: gameState.playerNames,
   })
@@ -486,6 +644,68 @@ function revealCards() {
     type:    "reveal",
     player1: gameState.plays[1],
     player2: gameState.plays[2],
+    question: gameState.currentQuestion,
+  })
+
+  // ApÃ³s revelar, resolve automaticamente o vencedor da rodada.
+  setTimeout(resolveRound, 900)
+}
+
+function resolveRound() {
+  const played1 = gameState.plays[1]
+  const played2 = gameState.plays[2]
+  if (!played1 || !played2) return
+
+  const question = gameState.currentQuestion
+
+  const card1 =
+    gameState.hands?.[1]?.find(c => c.name === played1) ||
+    LANGUAGES.find(c => c.name === played1)
+
+  const card2 =
+    gameState.hands?.[2]?.find(c => c.name === played2) ||
+    LANGUAGES.find(c => c.name === played2)
+
+  if (!card1 || !card2) {
+    console.warn("NÃ£o foi possÃ­vel resolver a rodada (carta invÃ¡lida):", { played1, played2 })
+    broadcast({ type: "draw", score: gameState.score, playerNames: gameState.playerNames })
+    return
+  }
+
+  const score1 = getWeightedScore(card1, question)
+  const score2 = getWeightedScore(card2, question)
+
+  const EPS = 1e-9
+  if (Math.abs(score1 - score2) < EPS) {
+    broadcast({
+      type:        "draw",
+      score:       gameState.score,
+      playerNames: gameState.playerNames,
+      scores:      { 1: score1, 2: score2 },
+    })
+    return
+  }
+
+  const winner = score1 > score2 ? 1 : 2
+  gameState.score[winner]++
+
+  if (gameState.score[winner] >= WIN_SCORE) {
+    broadcast({
+      type:        "gameover",
+      winner,
+      playerNames: gameState.playerNames,
+      score:       gameState.score,
+    })
+    return
+  }
+
+  broadcast({
+    type:        "result",
+    winner,
+    winnerCard:  winner === 1 ? card1.name : card2.name,
+    score:       gameState.score,
+    playerNames: gameState.playerNames,
+    scores:      { 1: score1, 2: score2 },
   })
 }
 
@@ -596,6 +816,12 @@ wss.on("connection", (ws) => {
             return
           }
 
+          const inHand = gameState.hands?.[playerId]?.some(c => c.name === data.card)
+          if (!inHand) {
+            console.warn(`Jogador ${playerId} tentou jogar uma carta que nÃ£o estÃ¡ na mÃ£o:`, data.card)
+            return
+          }
+
           gameState.plays[playerId] = data.card
           console.log(`Jogador ${playerId} jogou: ${data.card}`)
 
@@ -617,7 +843,7 @@ wss.on("connection", (ws) => {
 
         // Jogador enviou seu voto para o vencedor da rodada
         case "vote":
-          handleVote(playerId, data.winner)
+          console.warn(`Mensagem de voto ignorada (modo automatico). Jogador ${playerId}.`)
           break
 
         // Jogador clicou em "Próxima rodada" (manual ou pelo timer)
