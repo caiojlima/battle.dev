@@ -170,8 +170,28 @@ box-shadow:0 10px 28px rgba(46,204,113,.5);
 }
 
 #confirmBtn{
-background:#2ecc71;
+padding:13px 44px;
+font-size:15px;
+font-weight:600;
+letter-spacing:1px;
+
+background:linear-gradient(135deg,#2ecc71,#27ae60);
+color:#fff;
+
+border:none;
+border-radius:10px;
+
+cursor:pointer;
+
+transition:.2s;
+box-shadow:0 6px 20px rgba(46,204,113,.35);
+
 display:none;
+}
+
+#confirmBtn:hover{
+transform:translateY(-2px);
+box-shadow:0 10px 28px rgba(46,204,113,.5);
 }
 
 #nextBtn{
@@ -436,6 +456,41 @@ justify-content:center;
 gap:10px;
 }
 
+.timer-ring{
+  --p: 0;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:conic-gradient(#2ecc71 calc(var(--p) * 1turn), rgba(255,255,255,.16) 0);
+  position:relative;
+  flex:0 0 auto;
+}
+
+.timer-ring::after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  border-radius:50%;
+  background:#111;
+}
+
+.timer-seconds{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  color:#eaeaea;
+  font-weight:800;
+  z-index:1;
+}
+
+.round-placeholder.is-urgent{
+  border-color: rgba(46,204,113,.35);
+  box-shadow: 0 10px 28px rgba(46,204,113,.12);
+}
+
 .round-stage{
 width:100%;
 display:flex;
@@ -544,9 +599,8 @@ word-wrap:break-word;
       type="text" 
       id="playerNameInput" 
       placeholder="Seu nome..."
-      onkeypress="if(event.key==='Enter') startGame()"
     />
-    <button id="startGameBtn" onclick="startGame()">Começar</button>
+    <button id="startGameBtn">Começar</button>
   </div>
 </div>
 
@@ -576,23 +630,25 @@ Jogador1: <span id="p1">0</span>
 Jogador2: <span id="p2">0</span>
 </div>
 
+<div id="pickTimerBanner" class="round-placeholder" style="display:none;"></div>
+
 <div id="cards"></div>
 
-<button id="confirmBtn" onclick="confirmCard()">
+<button id="confirmBtn">
 Confirmar seleção
 </button>
 
 <h2 id="result"></h2>
 
-<button id="nextBtn" onclick="nextRound()">
+<button id="nextBtn">
 Próxima rodada
 </button>
 
-<button id="rematchBtn" onclick="rematch()" style="display:none;">
+<button id="rematchBtn" style="display:none;">
 Jogar novamente
 </button>
 
-<script src="client.js"></script>
+<script type="module" src="client.js"></script>
 
 
 </body>

@@ -47,7 +47,11 @@ Este projeto precisa rodar como **Web Service** (Node) que mantenha conexão Web
 
 ## Estrutura do projeto
 
-- `server.js` — servidor HTTP + WebSocket e lógica do jogo
-- `client.js` — lógica do cliente (UI + eventos WS)
+- `server.js` — servidor HTTP + WebSocket (entrypoint)
+- `server/room-store.js` — gerenciamento de salas/estado e helpers de broadcast/reset
+- `game/constants.js` — constantes e dados (cartas, perguntas, pesos)
+- `game/scoring.js` — lógica de pontuação e seleção de perguntas
+- `client.js` — entrypoint do cliente (carrega módulos)
+- `client/` — módulos do cliente (UI, estado, WebSocket, telas)
 - `index.html` — interface (HTML + CSS)
 
