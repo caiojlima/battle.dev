@@ -31,10 +31,10 @@ export const LANGUAGES = [
   {
     name: "JavaScript",
     personality: "O rei do caos organizado 👑",
-    // Sem mudanças — números já representam bem a realidade.
-    // Performance 70 é honesto: V8 é rápido para a categoria, mas não compete com C/Go.
-    // Facilidade 85: fácil de começar, difícil de dominar (assincronismo, this, etc.) — ok.
-    stats: { performance: 70, facilidade: 85, mercado: 95, complexidade: 60, popularidade: 98, tooling: 88, verbosidade: 42, mobile: 68 }
+    // Rebanceado para continuar forte sem dominar quase todas as perguntas generalistas.
+    // Facilidade/popularidade/mercado continuam altas, mas agora com um pouco mais de "custo"
+    // refletindo a bagunça do ecossistema, fadiga de tooling e manutenção em escala.
+    stats: { performance: 70, facilidade: 82, mercado: 92, complexidade: 62, popularidade: 95, tooling: 86, verbosidade: 46, mobile: 64 }
   },
   {
     name: "Python",
@@ -43,7 +43,9 @@ export const LANGUAGES = [
     //   mais lento que C/Go. 65 era generoso demais.
     // facilidade: 92 (era 95) — ainda altíssima, mas 95 rivalizava com "escrever inglês".
     //   Async, decoradores e tipagem opcional adicionam fricção real.
-    stats: { performance: 55, facilidade: 92, mercado: 92, complexidade: 50, popularidade: 97, tooling: 88, verbosidade: 33, mobile: 30 }
+    // Pequeno nerf em facilidade/mercado/popularidade para evitar que Python vença perguntas
+    // demais fora do seu domínio natural. Ainda continua referência em DX e ecossistema.
+    stats: { performance: 55, facilidade: 89, mercado: 88, complexidade: 52, popularidade: 94, tooling: 86, verbosidade: 35, mobile: 26 }
   },
   {
     name: "Java",
@@ -51,7 +53,8 @@ export const LANGUAGES = [
     // facilidade: 55 (era 60) — boilerplate, generics, checked exceptions, configuração de
     //   Maven/Gradle; é mais difícil do que o 60 sugeria para quem está começando.
     // complexidade: 78 (era 75) — JVM tuning, concorrência, frameworks corporativos.
-    stats: { performance: 80, facilidade: 55, mercado: 90, complexidade: 78, popularidade: 85, tooling: 80, verbosidade: 65, mobile: 84 }
+    // Java ganha um pequeno buff em tooling/confiabilidade enterprise, mas sem ficar mais fácil.
+    stats: { performance: 80, facilidade: 55, mercado: 88, complexidade: 78, popularidade: 83, tooling: 83, verbosidade: 65, mobile: 82 }
   },
   {
     name: "Go",
@@ -60,7 +63,8 @@ export const LANGUAGES = [
     //   herança, generics simples e tooling excelente tornam a curva muito suave.
     // mercado: 82 (era 78) — crescimento forte em cloud/infra; Kubernetes, Docker, Terraform
     //   são Go. Vagas aumentaram bastante nos últimos anos.
-    stats: { performance: 88, facilidade: 82, mercado: 82, complexidade: 55, popularidade: 72, tooling: 77, verbosidade: 40, mobile: 78 }
+    // Leve buff em mercado/tooling para aparecer mais em perguntas de backend/cloud sem inflar mobile.
+    stats: { performance: 88, facilidade: 80, mercado: 84, complexidade: 56, popularidade: 74, tooling: 80, verbosidade: 40, mobile: 70 }
   },
   {
     name: "Rust",
@@ -73,9 +77,9 @@ export const LANGUAGES = [
   {
     name: "C#",
     personality: "O queridinho da Microsoft 💚",
-    // Sem mudanças significativas — bem balanceado. C# tem facilidade real de ~70
-    //   (LINQ, async/await maduro, ótima IDE) e mercado forte em .NET/enterprise/games.
-    stats: { performance: 82, facilidade: 70, mercado: 85, complexidade: 65, popularidade: 80, tooling: 98, verbosidade: 51, mobile: 70 }
+    // Pequeno buff em mercado/popularidade/facilidade para refletir melhor .NET moderno,
+    // Unity e a maturidade absurda do ecossistema Microsoft.
+    stats: { performance: 82, facilidade: 72, mercado: 88, complexidade: 64, popularidade: 83, tooling: 98, verbosidade: 50, mobile: 72 }
   },
   {
     name: "TypeScript",
@@ -83,7 +87,8 @@ export const LANGUAGES = [
     // facilidade: 65 (era 70) — TS adiciona uma camada real de complexidade sobre JS:
     //   generics, utility types, decoradores, configuração do tsconfig. Não é trivial.
     // complexidade: 68 (era 65) — sistema de tipos estrutural com muitas nuances.
-    stats: { performance: 75, facilidade: 65, mercado: 88, complexidade: 68, popularidade: 90, tooling: 85, verbosidade: 55, mobile: 68 }
+    // Buff leve para competir melhor nas perguntas de projetos grandes/ecossistema sem ultrapassar JS.
+    stats: { performance: 76, facilidade: 66, mercado: 90, complexidade: 68, popularidade: 92, tooling: 89, verbosidade: 56, mobile: 68 }
   },
   {
     name: "PHP",
@@ -98,17 +103,14 @@ export const LANGUAGES = [
   {
     name: "C",
     personality: "Raiz, sem frescura 💀",
-    // Sem mudanças — C já está bem calibrado.
-    // performance 98 é correto (só perde para Assembly).
-    // facilidade 40 reflete gestão manual de memória, ponteiros, UB.
-    stats: { performance: 98, facilidade: 40, mercado: 70, complexidade: 95, popularidade: 72, tooling: 65, verbosidade: 81, mobile: 71 }
+    // Leve buff em mercado/tooling para valorizar firmware, embedded e legado crítico.
+    stats: { performance: 98, facilidade: 39, mercado: 72, complexidade: 95, popularidade: 72, tooling: 67, verbosidade: 81, mobile: 68 }
   },
   {
     name: "C++",
     personality: "Poder absoluto… com sofrimento 😈",
-    // Sem mudanças — C++ já estava bem calibrado.
-    // complexidade 98 é justo: templates, RAII, move semantics, UB, ABI hell.
-    stats: { performance: 97, facilidade: 35, mercado: 78, complexidade: 98, popularidade: 74, tooling: 67, verbosidade: 85, mobile: 74 }
+    // Pequeno ajuste para continuar monstruoso em performance/complexidade, mas um pouco menos onipresente.
+    stats: { performance: 97, facilidade: 35, mercado: 76, complexidade: 98, popularidade: 72, tooling: 66, verbosidade: 86, mobile: 70 }
   },
   {
     name: "Kotlin",
@@ -301,8 +303,8 @@ export const LANGUAGES = [
   {
     name: "Assembly",
     personality: "Eu sou o hardware falando ⚙️",
-    // Performance no teto, mas usabilidade/mercado são nicho (firmware, otimização, reverse).
-    stats: { performance: 99, facilidade: 5, mercado: 20, complexidade: 99, popularidade: 15, tooling: 14, verbosidade: 97, mobile: 24 }
+    // Continua no topo absoluto de performance, mas com números ainda mais nichados fora desse contexto.
+    stats: { performance: 99, facilidade: 5, mercado: 12, complexidade: 99, popularidade: 8, tooling: 8, verbosidade: 97, mobile: 2 }
   },
   {
     name: "Portugol",
@@ -313,8 +315,8 @@ export const LANGUAGES = [
   {
     name: "SQL",
     personality: "SELECT * FROM resultado; 🗄️",
-    // SQL é onipresente no mercado, mas é uma linguagem bem específica (dados).
-    stats: { performance: 65, facilidade: 70, mercado: 85, complexidade: 55, popularidade: 80, tooling: 99, verbosidade: 45, mobile: 88 }
+    // SQL segue dominante em dados, mas perde o exagero em mobile/generalismo.
+    stats: { performance: 64, facilidade: 70, mercado: 86, complexidade: 55, popularidade: 78, tooling: 99, verbosidade: 45, mobile: 12 }
   },
   {
     name: "MATLAB",
@@ -325,8 +327,8 @@ export const LANGUAGES = [
   {
     name: "Scratch",
     personality: "Blocos coloridos, lógica real 🧩",
-    // Perfeito para aprender, mas não serve para sistemas reais de produção.
-    stats: { performance: 5, facilidade: 100, mercado: 5, complexidade: 5, popularidade: 50, tooling: 85, verbosidade: 3, mobile: 50 }
+    // Perfeito para ensinar e introduzir lógica, mas bem menos competitivo fora do contexto educacional.
+    stats: { performance: 5, facilidade: 100, mercado: 5, complexidade: 5, popularidade: 40, tooling: 72, verbosidade: 3, mobile: 8 }
   },
   {
     name: "Delphi",
