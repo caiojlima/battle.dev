@@ -9,6 +9,7 @@ function createDomFixture() {
   const waitingPlayerName = createMockElement({ id: "waitingPlayerName" })
   const playerCount = createMockElement({ id: "playerCount" })
   const playerNameInput = createMockElement({ id: "playerNameInput", tagName: "INPUT" })
+  const playerNameError = createMockElement({ id: "playerNameError" })
   const startGameBtn = createMockElement({ id: "startGameBtn", tagName: "BUTTON" })
 
   const question = createMockElement({ id: "question" })
@@ -31,6 +32,7 @@ function createDomFixture() {
     waitingPlayerName,
     playerCount,
     playerNameInput,
+    playerNameError,
     startGameBtn,
     question,
     status,
@@ -44,10 +46,9 @@ function createDomFixture() {
     cards,
   })
 
-  globalThis.alert = vi.fn()
   globalThis.document.querySelectorAll = () => []
 
-  return { playerNameInput, startGameBtn, status, cards, pickTimerBanner, score, question }
+  return { playerNameInput, playerNameError, startGameBtn, status, cards, pickTimerBanner, score, question }
 }
 
 describe("client/app", () => {
@@ -67,15 +68,34 @@ describe("client/app", () => {
     expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "join", name: "Alice" }))
   })
 
-  it("startGame deve alertar quando nome estiver vazio", () => {
-    const { startGameBtn } = createDomFixture()
+  it("startGame deve mostrar erro estilizado quando nome estiver vazio", () => {
+    const { startGameBtn, playerNameInput, playerNameError } = createDomFixture()
     const socket = { send: vi.fn() }
 
     initApp({ socket })
     startGameBtn.dispatchEvent("click")
 
-    expect(globalThis.alert).toHaveBeenCalled()
+    expect(playerNameError.innerText).toContain("Digite seu nome")
+    expect(playerNameError.style.display).toBe("block")
+    expect(playerNameInput.classList.contains("is-invalid")).toBe(true)
     expect(socket.send).not.toHaveBeenCalled()
+  })
+
+  it("deve limpar o erro do login ao digitar", () => {
+    const { playerNameInput, playerNameError } = createDomFixture()
+    const socket = { send: vi.fn() }
+
+    initApp({ socket })
+
+    playerNameError.innerText = "erro"
+    playerNameError.style.display = "block"
+    playerNameInput.classList.add("is-invalid")
+
+    playerNameInput.dispatchEvent("input")
+
+    expect(playerNameError.innerText).toBe("")
+    expect(playerNameError.style.display).toBe("none")
+    expect(playerNameInput.classList.contains("is-invalid")).toBe(false)
   })
 
   it("deve iniciar countdown quando receber pickTimer", () => {

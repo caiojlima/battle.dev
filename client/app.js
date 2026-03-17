@@ -12,7 +12,7 @@ import {
   startResultCalcAnimation,
   stopResultCalcAnimation,
 } from "./round-ui.js"
-import { showLoginScreen, showWaitingScreen } from "./screens.js"
+import { setLoginError, showLoginScreen, showWaitingScreen } from "./screens.js"
 import { sendMessage } from "./ws.js"
 
 function getOpponentName() {
@@ -402,11 +402,12 @@ function startGame() {
   const name = (nameInput?.value || "").trim()
 
   if (!name) {
-    alert("Digite um nome para continuar!")
+    setLoginError("Digite seu nome para começar a partida.")
     nameInput?.focus?.()
     return
   }
 
+  setLoginError("")
   state.playerName = name
   showWaitingScreen({ playerName: state.playerName })
   sendMessage(state.socket, { type: "join", name: state.playerName })
@@ -673,6 +674,7 @@ export function initApp({ socket }) {
   el("nextBtn")?.addEventListener("click", nextRound)
   el("rematchBtn")?.addEventListener("click", rematch)
   el("declineRematchBtn")?.addEventListener("click", declineRematch)
+  el("playerNameInput")?.addEventListener("input", () => setLoginError(""))
   el("playerNameInput")?.addEventListener("keypress", (event) => {
     if (event.key === "Enter") startGame()
   })
